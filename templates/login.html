@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}登录{% endblock %}
+
+{% block content %}
+    <div class="auth-page-container">
+        <div class="auth-form-section">
+            <h2>登录</h2>
+            <form method="post" onsubmit="return validateForm()">
+                <div class="form-group">
+                    <label for="username">用户名</label>
+                    <input type="text" id="username" name="username" placeholder="请输入用户名" required maxlength="20">
+                </div>
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" name="password" placeholder="请输入密码" required maxlength="20">
+                </div>
+                <div class="form-group form-check">
+                    <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                    <label class="form-check-label" for="remember">记住我</label>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block auth-submit-btn">登录</button>
+            </form>
+            <div class="auth-extra-links">
+                <a href="{{ url_for('home') }}" class="text-link">返回首页</a>
+            </div>
+        </div>
+        <div class="auth-info-section">
+            <h3>还没有账户？</h3>
+            <p>立即注册，体验更多精彩功能！</p>
+            <a href="{{ url_for('register') }}" class="btn btn-secondary btn-block">创建新账户</a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <script id="flashed-messages" type="application/json">
+                {{ messages | tojson }}
+            </script>
+        {% endif %}
+    {% endwith %}
+    <script>
+        function validateForm() {
+            var username = document.getElementById('username').value;
+            var password = document.getElementById('password').value;
+
+            if (username.length < 3 || password.length < 3) {
+                showToast('用户名和密码至少需要3个字符', 'warning');
+                return false;
+            }
+            return true;
+        }
+
+        // Retrieve and parse flashed messages from the script tag
+        var flashedMessagesScript = document.getElementById('flashed-messages');
+        if (flashedMessagesScript) {
+            var flashedMessages = JSON.parse(flashedMessagesScript.textContent);
+
+            // Display flashed messages using the array
+            flashedMessages.forEach(function(msg) {
+                // The structure of messages from get_flashed_messages(with_categories=true) is [('category', 'message'), ...]
+                showToast(msg[1], msg[0]);
+            });
+        }
+    </script>
+{% endblock %}

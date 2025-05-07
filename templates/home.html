@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}主页 - 游戏平台{% endblock %}
+
+{% block content %}
+    <h1>欢迎来到游戏平台</h1>
+
+    <div class="game-grid">
+        <a href="{{ url_for('blackjack_game') }}" class="game-button">Blackjack 21点</a>
+        <button class="game-button" disabled>五子棋 (敬请期待)</button>
+        <button class="game-button" disabled>更多游戏 (敬请期待)</button>
+    </div>
+{% endblock %}
