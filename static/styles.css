@@ -11,6 +11,11 @@ h1, h2, h3 {
     text-align: center;
 }
 
+.href {
+    color: #c2daea;
+    text-decoration: none;
+}
+
 .game-container {
     display: flex;
     gap: 20px;

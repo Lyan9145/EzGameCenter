@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}游戏中心{% endblock %}</title>
+    <title>{% block title %}EzGameCenter{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 </head>
 <body>
     <nav class="navbar">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('home') }}">游戏平台</a>
+            <a class="navbar-brand" href="{{ url_for('home') }}">EzGameCenter</a>
             <div class="navbar-links">
                 {% if session.get('username') %}
                     <span>欢迎, {{ session['username'] }}!</span>

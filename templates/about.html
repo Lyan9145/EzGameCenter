@@ -1,8 +1,66 @@
 {% extends "base.html" %}
 
-{% block title %}关于我们 - 游戏平台{% endblock %}
+{% block title %}关于我们 - EzGameCenter{% endblock %}
 
 {% block content %}
-    <h2>关于作者</h2>
-    <p>此游戏平台由一位热情的开发者创建。更多信息和功能正在开发中！</p>
+    <h2>关于项目</h2>
+    <div class="about-content">
+        <section>
+            <h3>项目介绍</h3>
+            <p>EzGameCenter是一个使用Flask框架开发的网页小游戏中心，目前已实现21点(Blackjack)游戏，未来将添加更多游戏。</p>
+            <p>项目Github链接：<a href="https://github.com/Lyan9145/EzGameCenter" class="href">https://github.com/Lyan9145/EzGameCenter</a>
+            </p>
+        </section>
+        
+        <section>
+            <h3>技术架构</h3>
+            <p>后端采用了以下技术栈：</p>
+            <ul>
+                <li><strong>Web框架</strong>：Flask框架 + 异步支持（async/await）</li>
+                <li><strong>数据库</strong>：SQLite + SQLAlchemy ORM</li>
+                <li><strong>用户认证</strong>：Flask Session + Werkzeug安全密码哈希</li>
+                <li><strong>游戏逻辑</strong>：纯Python实现，支持完整21点规则</li>
+            </ul>
+        </section>
+        
+        <section>
+            <h3>技术亮点</h3>
+            <ul>
+                <li><strong>异步API</strong>：使用Flask异步API处理游戏逻辑，提高并发性能</li>
+                <li><strong>会话持久化</strong>：游戏状态存储在数据库，支持断线重连</li>
+                <li><strong>庄家AI</strong>：实现智能庄家决策算法，根据牌局和风险动态决策</li>
+                <li><strong>JSON序列化</strong>：自定义SQLAlchemy类型支持复杂游戏数据的存储与检索</li>
+                <li><strong>RESTful API</strong>：清晰的API设计，前后端分离架构</li>
+            </ul>
+        </section>
+        
+        <section>
+            <h3>数据模型</h3>
+            <p>系统包含以下核心数据模型：</p>
+            <ul>
+                <li><strong>User</strong>：用户信息和认证</li>
+                <li><strong>GameSession</strong>：当前游戏会话状态（牌组、手牌、分数等）</li>
+                <li><strong>Ranking</strong>：用户排名记录</li>
+                <li><strong>GameRecord</strong>：历史游戏记录</li>
+            </ul>
+        </section>
+        
+        <section>
+            <h3>黑杰克规则实现</h3>
+            <p>游戏实现了标准的21点规则：</p>
+            <ul>
+                <li>A可作为1或11点，自动优化计分</li>
+                <li>庄家17点以下必须要牌，软17点也会要牌</li>
+                <li>玩家21点（黑杰克）直接胜利</li>
+                <li>支持玩家操作：要牌、停牌、双倍下注</li>
+                <li>完整的胜负和平局判定逻辑</li>
+            </ul>
+        </section>
+    </div>
+<h2>作者信息</h2>
+    <div class="author-info">
+        <p>项目作者：<strong>张与司</strong></p>
+        <p>学号：<strong>22211293</strong></p>
+        <p>联系方式：<a href="mailto:22211293@bjtu.edu.cn" class="href">22211293@bjtu.edu.cn</a></p>
+    </div>
 {% endblock %}

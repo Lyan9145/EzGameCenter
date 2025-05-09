@@ -284,19 +284,23 @@ function placeBet(amount) {
 }
 
 function lockBetControls() {
-    elements.betAmountInput.disabled = true;
-    elements.betSubmitBtn.disabled = true;
-    elements.betBtns.forEach(btn => {
-        btn.disabled = true;
-    });
+    if (elements.betAmountInput) elements.betAmountInput.disabled = true;
+    if (elements.betSubmitBtn) elements.betSubmitBtn.disabled = true;
+    if (elements.betBtns) {
+        elements.betBtns.forEach(btn => {
+            btn.disabled = true;
+        });
+    }
 }
 
 function unlockBetControls() {
-    elements.betAmountInput.disabled = false;
-    elements.betSubmitBtn.disabled = false;
-    elements.betBtns.forEach(btn => {
-        btn.disabled = false;
-    });
+    if (elements.betAmountInput) elements.betAmountInput.disabled = false;
+    if (elements.betSubmitBtn) elements.betSubmitBtn.disabled = false;
+    if (elements.betBtns) {
+        elements.betBtns.forEach(btn => {
+            btn.disabled = false;
+        });
+    }
 }
 
 function recommendBets(balance) {
