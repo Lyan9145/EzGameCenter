@@ -41,13 +41,13 @@ fi
 echo -e "${YELLOW}Activating virtual environment...${NC}"
 source venv/bin/activate
 
-# Check if requirements.txt exists
-if [ -f "requirements.txt" ]; then
-    echo -e "${YELLOW}Installing dependencies from requirements.txt...${NC}"
-    pip install -r requirements.txt
+# Check if requirement.txt exists
+if [ -f "requirement.txt" ]; then
+    echo -e "${YELLOW}Installing dependencies from requirement.txt...${NC}"
+    pip install -r requirement.txt
     echo -e "${GREEN}Dependencies installed successfully.${NC}"
 else
-    echo -e "${RED}requirements.txt not found. Please make sure it exists in the current directory.${NC}"
+    echo -e "${RED}requirement.txt not found. Please make sure it exists in the current directory.${NC}"
     exit 1
 fi
 

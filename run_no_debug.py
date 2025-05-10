@@ -1,7 +1,7 @@
 from app import *
 
 app.secret_key = "actually_secret"
-host = 'localhost'
+host = '0.0.0.0'
 port = 23333
 
 if __name__ == "__main__":
