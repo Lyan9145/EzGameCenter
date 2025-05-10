@@ -1,4 +1,0 @@
-Flask[async]
-Flask-SQLAlchemy
-SQLAlchemy
-Werkzeug
