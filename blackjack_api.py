@@ -1,353 +1,413 @@
 from flask import jsonify, request, session
 from datetime import datetime
+import logging
 
 from database import db, User, GameSession, GameRecord, Ranking
 from database import update_rankings_db, add_game_record
-
 import game_logic
-from game_logic import *
+
+logger = logging.getLogger(__name__)
 
 # Get app reference (will be initialized when this is imported)
 from app import app
 
-@app.route('/api/game/start', methods=['POST'])
-async def start_game():
-    print('Starting game for user:', session.get('username'))
-    if 'username' not in session:
-        print('User not logged in')
-        return jsonify({'error': '未登录'}), 401
+class GameError(Exception):
+    """Custom exception for game-related errors."""
+    pass
 
+def get_current_user():
+    """Get current logged-in user."""
+    if 'username' not in session:
+        raise GameError('未登录')
+    
     user = User.query.filter_by(username=session['username']).first()
     if not user:
-        return jsonify({'error': '用户不存在'}), 404
+        raise GameError('用户不存在')
+    
+    return user
 
-    data = request.get_json()
-    bet_amount = data.get('bet_amount', 0)
-    print('Received bet amount:', bet_amount)
-
-    # 创建新牌组并洗牌
-    deck = game_logic.create_deck()
-    game_logic.shuffle_deck(deck)
-    print('Deck shuffled:', deck[:5])
-
-    # 发牌
-    player_hand = game_logic.deal_cards(deck)
-    dealer_hand = game_logic.deal_cards(deck, num_cards=2)
-    print('Player hand:', player_hand)
-    print('Dealer hand:', dealer_hand)
-
-    # 计算分数
-    player_score = game_logic.calculate_score(player_hand)
-    dealer_score = game_logic.calculate_score(dealer_hand)
-
-    # 创建新的 GameSession 记录
-    new_game_session = GameSession(
-        user_id=user.id,
-        deck=deck,
-        player_hand=player_hand,
-        dealer_hand=dealer_hand,
-        player_score=player_score,
-        dealer_score=dealer_score,
-        current_bet=bet_amount,
-        game_over=False
-    )
-    db.session.add(new_game_session)
-    db.session.commit() # Need to commit to get the session ID
-
-    # 将游戏 session ID 存储在 Flask session 中
-    session['game_session_id'] = new_game_session.id
-    print('Game session ID stored in Flask session:', session['game_session_id'])
-
-    # 返回给前端的数据，庄家第二张牌隐藏
-    response_data = {
-        'player_hand': player_hand,
-        'dealer_hand': [dealer_hand[0], {'hidden': True}], # 庄家第二张牌隐藏
-        'player_score': player_score,
-        'dealer_score': game_logic.calculate_score([dealer_hand[0]]), # 只显示庄家明牌的分数
-        'bet_amount': bet_amount,
-        'game_over': False
-    }
-
-    # 检查玩家是否 Blackjack
-    if player_score == 21:
-        print('Player Blackjack!')
-        # 如果玩家 Blackjack，直接进行庄家回合并结束游戏
-        # 需要异步加载 game_session 才能更新
-        game_session = GameSession.query.get(session['game_session_id'])
-        if game_session:
-            game_session.game_over = True
-            # 使用从数据库加载的牌堆和庄家手牌进行庄家回合
-            dealer_final_score = game_logic.dealer_ai_turn(game_session.deck, game_session.dealer_hand, game_session.player_score)
-            game_session.dealer_score = dealer_final_score
-            db.session.commit()
-
-            result = game_logic.determine_result(game_session.player_score, game_session.dealer_score)
-            response_data['game_over'] = True
-            response_data['dealer_hand'] = game_session.dealer_hand # 游戏结束，显示庄家完整手牌
-            response_data['dealer_score'] = game_session.dealer_score
-            response_data['result'] = result
-            if result != 'draw':
-                 # 异步更新排名和游戏记录
-                 update_rankings_db(user.id, game_session.current_bet * (2 if result == 'win' else 0))
-                 add_game_record(user.id, result, game_session.player_score, game_session.dealer_score, game_session.current_bet)
-
-
-    response = jsonify(response_data)
-    print('Start game response:', response.json)
-    return response
-
-
-
-@app.route('/api/game/hit', methods=['POST'])
-async def hit():
-    print('Player hits')
-    if 'username' not in session:
-        print('User not logged in')
-        return jsonify({'error': '未登录'}), 401
-
-    # 从 Flask session 获取游戏 session ID
+def get_current_game_session():
+    """Get current game session."""
     game_session_id = session.get('game_session_id')
     if not game_session_id:
-        print('Game session ID not found in session')
-        return jsonify({'error': '游戏未开始'}), 400
-
-    # 从数据库异步加载游戏状态
+        raise GameError('游戏未开始')
+    
     game_session = GameSession.query.get(game_session_id)
     if not game_session or game_session.game_over:
-        print('Game not found or already over')
-        return jsonify({'error': '游戏未开始或已结束'}), 400
+        raise GameError('游戏未开始或已结束')
+    
+    return game_session
 
-    # 使用从数据库加载的状态
-    deck = game_session.deck
-    player_hand = game_session.player_hand
-    player_score = game_session.player_score
-    user_id = game_session.user_id
-    current_bet = game_session.current_bet
-
-    print('Current deck (from db):', deck[:5])
-    print('Current player hand (from db):', player_hand)
-
-    # 发牌
-    if not deck:
-        print('Deck is empty, cannot hit')
-        return jsonify({'error': '牌堆为空，无法要牌'}), 400
-
-    new_card = deck.pop()
-    player_hand.append(new_card)
-    print('New card:', new_card)
-
-    # 计算新分数
-    player_score = game_logic.calculate_score(player_hand)
-    print('New player score:', player_score)
-
-    # 更新数据库中的游戏状态
-    game_session.deck = deck
-    game_session.player_hand = player_hand
-    game_session.player_score = player_score
-    game_session.updated_at = datetime.utcnow() # Update timestamp
+def update_game_session(game_session, **kwargs):
+    """Update game session with provided fields."""
+    for key, value in kwargs.items():
+        setattr(game_session, key, value)
+    game_session.updated_at = datetime.utcnow()
     db.session.commit()
 
-    response_data = {
-        'player_hand': player_hand,
-        'new_card': new_card,
-        'player_score': player_score,
-        'game_over': False,
-        'deck': deck # 返回更新后的牌堆
-    }
+def handle_game_end(game_session, result):
+    """Handle end game logic including payouts and records."""
+    user = User.query.get(game_session.user_id)
+    
+    # Calculate payout
+    payout = 0
+    if result == 'win':
+        payout = game_session.current_bet * 2
+    elif result == 'draw':
+        payout = game_session.current_bet
+    
+    # Update user balance
+    user.balance += payout
+    
+    # Record game and update rankings
+    add_game_record(
+        game_session.user_id, 
+        result, 
+        game_session.player_score, 
+        game_session.dealer_score, 
+        game_session.current_bet
+    )
+    
+    if result != 'draw':
+        update_rankings_db(game_session.user_id, payout)
+    
+    db.session.commit()
+    return user.balance
 
-    # 检查玩家是否爆牌
-    if player_score > 21:
-        print('Player busted!')
-        game_session.game_over = True
-        db.session.commit() # Commit game over state
-        response_data['game_over'] = True
-        response_data['result'] = 'lose' # 玩家爆牌直接输
+@app.route('/api/game/start', methods=['POST'])
+def start_game():
+    """Start a new blackjack game."""
+    try:
+        user = get_current_user()
+        data = request.get_json() or {}
+        bet_amount = data.get('bet_amount', 0)
+        
+        # Validate bet amount
+        if not isinstance(bet_amount, (int, float)) or bet_amount <= 0:
+            return jsonify({'error': '下注金额必须大于0'}), 400
+        
+        if user.balance < bet_amount:
+            return jsonify({'error': '余额不足'}), 400
 
-        # 记录游戏结果
-        add_game_record(user_id, 'lose', player_score, game_session.dealer_score, current_bet)
+        # Deduct bet amount
+        user.balance -= bet_amount
+        
+        # Create and shuffle deck
+        deck = game_logic.create_deck()
+        game_logic.shuffle_deck(deck)
 
-    response = jsonify(response_data)
-    print('Hit response:', response.json)
-    return response
+        # Deal initial cards
+        player_hand = game_logic.deal_cards(deck, 2)
+        dealer_hand = game_logic.deal_cards(deck, 2)
 
+        # Calculate scores
+        player_score = game_logic.calculate_score(player_hand)
+        dealer_score = game_logic.calculate_score(dealer_hand)
 
-@app.route('/api/game/double_down', methods=['POST'])
-async def double_down():
-    print('Player doubles down')
-    if 'username' not in session:
-        print('User not logged in')
-        return jsonify({'error': '未登录'}), 401
-
-    # 从 Flask session 获取游戏 session ID
-    game_session_id = session.get('game_session_id')
-    if not game_session_id:
-        print('Game session ID not found in session')
-        return jsonify({'error': '游戏未开始'}), 400
-
-    # 从数据库异步加载游戏状态
-    game_session = GameSession.query.get(game_session_id)
-    if not game_session or game_session.game_over:
-        print('Game not found or already over')
-        return jsonify({'error': '游戏未开始或已结束'}), 400
-
-    # 使用从数据库加载的状态
-    deck = game_session.deck
-    player_hand = game_session.player_hand
-    current_bet = game_session.current_bet
-    user_id = game_session.user_id
-
-    # 验证赌注金额 (这里需要从用户模型获取余额，暂时跳过余额检查)
-    # if user.balance < current_bet:
-    #     return jsonify({'error': '余额不足'}), 400
-
-    # 双倍下注
-    game_session.current_bet *= 2
-    db.session.commit() # Commit updated bet
-
-    # 发牌
-    if not deck:
-        print('Deck is empty, cannot double down')
-        return jsonify({'error': '牌堆为空，无法要牌'}), 400
-
-    new_card = deck.pop()
-    player_hand.append(new_card)
-    print('New card:', new_card)
-
-    # 计算新分数
-    player_score = game_logic.calculate_score(player_hand)
-    print('Player score:', player_score)
-
-    # 更新数据库中的游戏状态
-    game_session.deck = deck
-    game_session.player_hand = player_hand
-    game_session.player_score = player_score
-    game_session.updated_at = datetime.utcnow() # Update timestamp
-
-    if player_score > 21:
-        print('Player busted after double down!')
-        game_session.game_over = True
-        db.session.commit() # Commit game over state
-        result = 'lose'
-        # 记录游戏结果
-        add_game_record(user_id, result, player_score, game_session.dealer_score, game_session.current_bet)
-
-        response = jsonify({
-            'player_hand': player_hand,
-            'new_card': new_card,
-            'player_score': player_score,
-            'game_over': True,
-            'result': result,
-            # 'balance': user.balance # 需要从用户模型获取余额
-        })
-        print('Double down response:', response.json)
-        return response
-
-    # 如果没有爆牌，双倍下注后必须停牌，直接进入庄家回合
-    print('Player did not bust, proceeding to dealer turn')
-    # 需要异步加载 game_session 才能更新
-    game_session = GameSession.query.get(game_session_id) # Re-fetch to ensure latest state
-    if game_session:
-        game_session.game_over = True
-        # 使用从数据库加载的牌堆和庄家手牌进行庄家回合
-        dealer_final_score = game_logic.dealer_ai_turn(game_session.deck, game_session.dealer_hand, game_session.player_score)
-        game_session.dealer_score = dealer_final_score
+        # Create game session
+        new_game_session = GameSession(
+            user_id=user.id,
+            deck=deck,
+            player_hand=player_hand,
+            dealer_hand=dealer_hand,
+            player_score=player_score,
+            dealer_score=dealer_score,
+            current_bet=bet_amount,
+            game_over=False
+        )
+        db.session.add(new_game_session)
         db.session.commit()
 
-        result = game_logic.determine_result(game_session.player_score, game_session.dealer_score)
-        # 异步更新排名和游戏记录
-        if result != 'draw':
-             update_rankings_db(user_id, game_session.current_bet * (2 if result == 'win' else 0))
-        add_game_record(user_id, result, game_session.player_score, game_session.dealer_score, game_session.current_bet)
+        session['game_session_id'] = new_game_session.id
 
-        response = jsonify({
+        response_data = {
+            'player_hand': player_hand,
+            'dealer_hand': dealer_hand,
+            'player_score': player_score,
+            'dealer_score': dealer_score,
+            'current_bet': bet_amount,
+            'balance': user.balance,
+            'game_over': False
+        }
+
+        # Check for player blackjack
+        if game_logic.is_blackjack(player_hand):
+            new_game_session.game_over = True
+            dealer_final_score = game_logic.dealer_ai_turn(
+                new_game_session.deck, 
+                new_game_session.dealer_hand, 
+                new_game_session.player_score
+            )
+            new_game_session.dealer_score = dealer_final_score
+            
+            result = game_logic.determine_result(player_score, dealer_final_score)
+            
+            # Handle blackjack payout (1.5x)
+            if result == 'win':
+                user.balance += bet_amount * 2.5
+            elif result == 'draw':
+                user.balance += bet_amount
+            
+            db.session.commit()
+            
+            response_data.update({
+                'game_over': True,
+                'dealer_hand': new_game_session.dealer_hand,
+                'dealer_score': new_game_session.dealer_score,
+                'result': result,
+                'balance': user.balance
+            })
+            
+            # Record game
+            add_game_record(user.id, result, player_score, dealer_final_score, bet_amount)
+            if result != 'draw':
+                update_rankings_db(user.id, bet_amount * (2.5 if result == 'win' else 0))
+
+        return jsonify(response_data)
+        
+    except GameError as e:
+        return jsonify({'error': str(e)}), 401
+    except Exception as e:
+        logger.error(f"Error starting game: {e}")
+        return jsonify({'error': '游戏启动失败'}), 500
+
+@app.route('/api/game/hit', methods=['POST'])
+def hit():
+    """Player hits (takes another card)."""
+    try:
+        user = get_current_user()
+        game_session = get_current_game_session()
+
+        if not game_session.deck:
+            return jsonify({'error': '牌堆为空，无法要牌'}), 400
+
+        # Create new deck list and deal new card
+        new_deck = list(game_session.deck)
+        new_card = new_deck.pop()
+        
+        # Create new list to ensure SQLAlchemy detects the change
+        new_player_hand = list(game_session.player_hand)
+        new_player_hand.append(new_card)
+        
+        game_session.deck = new_deck
+        game_session.player_hand = new_player_hand
+        game_session.player_score = game_logic.calculate_score(game_session.player_hand)
+
+        # Check for player bust
+        if game_session.player_score > 21:
+            update_game_session(game_session, game_over=True)
+            balance = handle_game_end(game_session, 'lose')
+            
+            return jsonify({
+                'player_hand': game_session.player_hand,
+                'dealer_hand': game_session.dealer_hand,
+                'player_score': game_session.player_score,
+                'dealer_score': game_session.dealer_score,
+                'current_bet': game_session.current_bet,
+                'balance': balance,
+                'game_over': True,
+                'result': 'lose'
+            })
+
+        # Dealer takes one action if should hit
+        if game_logic.dealer_should_hit(game_session.dealer_hand, game_session.player_score):
+            if game_session.deck:
+                # Create new deck list for dealer card
+                new_deck = list(game_session.deck)
+                dealer_new_card = new_deck.pop()
+                
+                # Create new list for dealer hand too
+                new_dealer_hand = list(game_session.dealer_hand)
+                new_dealer_hand.append(dealer_new_card)
+                
+                game_session.deck = new_deck
+                game_session.dealer_hand = new_dealer_hand
+                game_session.dealer_score = game_logic.calculate_score(game_session.dealer_hand)
+                
+                # Check dealer bust
+                if game_session.dealer_score > 21:
+                    update_game_session(game_session, game_over=True)
+                    balance = handle_game_end(game_session, 'win')
+                    
+                    return jsonify({
+                        'player_hand': game_session.player_hand,
+                        'dealer_hand': game_session.dealer_hand,
+                        'player_score': game_session.player_score,
+                        'dealer_score': game_session.dealer_score,
+                        'current_bet': game_session.current_bet,
+                        'balance': balance,
+                        'game_over': True,
+                        'result': 'win'
+                    })
+
+        # Update game state with the new hand and score data
+        update_game_session(
+            game_session,
+            player_hand=game_session.player_hand,
+            player_score=game_session.player_score,
+            dealer_hand=game_session.dealer_hand,
+            dealer_score=game_session.dealer_score,
+            deck=game_session.deck
+        )
+
+        return jsonify({
             'player_hand': game_session.player_hand,
-            'new_card': new_card, # Still return the new card
+            'dealer_hand': game_session.dealer_hand,
             'player_score': game_session.player_score,
-            'dealer_hand': game_session.dealer_hand, # Show dealer hand
-            'dealer_score': game_session.dealer_score, # Show dealer score
-            'game_over': True,
-            'result': result,
-            # 'balance': user.balance # Need user balance
+            'dealer_score': game_session.dealer_score,
+            'current_bet': game_session.current_bet,
+            'balance': user.balance,
+            'game_over': False
         })
-        print('Double down response (after dealer turn):', response.json)
-        return response
-
-    # This part should ideally not be reached if player didn't bust
-    response = jsonify({
-        'player_hand': player_hand,
-        'new_card': new_card,
-        'player_score': player_score,
-        'game_over': False, # Should be True after double down
-        # 'balance': user.balance # Need user balance
-    })
-    print('Double down response (unexpected):', response.json)
-    return response
-
+        
+    except GameError as e:
+        return jsonify({'error': str(e)}), 401
+    except Exception as e:
+        logger.error(f"Error in hit: {e}")
+        return jsonify({'error': '操作失败'}), 500
 
 @app.route('/api/game/stand', methods=['POST'])
-async def stand():
-    print('Player stands')
-    if 'username' not in session:
-        print('User not logged in')
-        return jsonify({'error': '未登录'}), 401
+def stand():
+    """Player stands (dealer plays to completion)."""
+    try:
+        user = get_current_user()
+        game_session = get_current_game_session()
 
-    # 从 Flask session 获取游戏 session ID
-    game_session_id = session.get('game_session_id')
-    if not game_session_id:
-        print('Game session ID not found in session')
-        return jsonify({'error': '游戏未开始'}), 400
+        # Dealer plays to completion
+        dealer_final_score = game_logic.dealer_ai_turn(
+            game_session.deck, 
+            game_session.dealer_hand, 
+            game_session.player_score
+        )
+        
+        # Determine result
+        result = game_logic.determine_result(game_session.player_score, dealer_final_score)
+        
+        # Update game session
+        update_game_session(
+            game_session,
+            dealer_score=dealer_final_score,
+            game_over=True
+        )
+        
+        # Handle payouts and records
+        balance = handle_game_end(game_session, result)
 
-    # 从数据库异步加载游戏状态
-    game_session = GameSession.query.get(game_session_id)
-    if not game_session or game_session.game_over:
-        print('Game not found or already over')
-        return jsonify({'error': '游戏未开始或已结束'}), 400
+        return jsonify({
+            'player_hand': game_session.player_hand,
+            'dealer_hand': game_session.dealer_hand,
+            'player_score': game_session.player_score,
+            'dealer_score': dealer_final_score,
+            'result': result,
+            'balance': balance,
+            'current_bet': game_session.current_bet,
+            'game_over': True
+        })
+        
+    except GameError as e:
+        return jsonify({'error': str(e)}), 401
+    except Exception as e:
+        logger.error(f"Error in stand: {e}")
+        return jsonify({'error': '操作失败'}), 500
 
-    # 使用从数据库加载的状态
-    deck = game_session.deck
-    player_hand = game_session.player_hand
-    dealer_hand = game_session.dealer_hand
-    player_score = game_session.player_score
-    current_bet = game_session.current_bet
-    user_id = game_session.user_id
+@app.route('/api/game/double_down', methods=['POST'])
+def double_down():
+    """Player doubles down (double bet, take one card, then stand)."""
+    try:
+        user = get_current_user()
+        game_session = get_current_game_session()
 
-    print('Current deck (from db):', deck[:5])
-    print('Current player hand (from db):', player_hand)
-    print('Current dealer hand (from db):', dealer_hand)
-    print('Current player score (from db):', player_score)
-    print('Current bet (from db):', current_bet)
+        # Check if player can afford to double
+        if user.balance < game_session.current_bet:
+            return jsonify({'error': '余额不足以加倍'}), 400
 
-    # 庄家行动 - 使用从数据库加载的牌堆和庄家手牌
-    dealer_final_score = game_logic.dealer_ai_turn(deck, dealer_hand, player_score)
-    print('Dealer hand after standing:', dealer_hand)
-    print('Dealer score:', dealer_final_score)
+        # Double the bet and deduct from balance
+        user.balance -= game_session.current_bet
+        game_session.current_bet *= 2
 
-    # 确定游戏结果
-    result = game_logic.determine_result(player_score, dealer_final_score)
-    print('Game result:', result)
+        if not game_session.deck:
+            return jsonify({'error': '牌堆为空，无法要牌'}), 400
 
-    # 更新数据库中的游戏状态
-    game_session.deck = deck
-    game_session.dealer_hand = dealer_hand
-    game_session.dealer_score = dealer_final_score
-    game_session.game_over = True
-    game_session.updated_at = datetime.utcnow() # Update timestamp
-    db.session.commit()
+        # Create new deck list and deal one card
+        new_deck = list(game_session.deck)
+        new_card = new_deck.pop()
+        
+        # Create new list to ensure SQLAlchemy detects the change
+        new_player_hand = list(game_session.player_hand)
+        new_player_hand.append(new_card)
+        
+        game_session.deck = new_deck
+        game_session.player_hand = new_player_hand
+        game_session.player_score = game_logic.calculate_score(game_session.player_hand)
 
-    # 记录游戏结果并更新排名
-    if result != 'draw':
-        update_rankings_db(user_id, current_bet * (2 if result == 'win' else 0))
-    add_game_record(user_id, result, player_score, dealer_final_score, current_bet)
+        # Check for player bust
+        if game_session.player_score > 21:
+            update_game_session(game_session, game_over=True)
+            balance = handle_game_end(game_session, 'lose')
+            
+            return jsonify({
+                'player_hand': game_session.player_hand,
+                'dealer_hand': game_session.dealer_hand,
+                'player_score': game_session.player_score,
+                'dealer_score': game_session.dealer_score,
+                'current_bet': game_session.current_bet,
+                'balance': balance,
+                'game_over': True,
+                'result': 'lose',
+                'new_card': new_card
+            })
 
-    response_data = {
-        'dealer_hand': dealer_hand, # 返回真实的庄家手牌
-        'player_score': player_score,
-        'dealer_score': dealer_final_score,
-        'result': result,
-        'game_over': True,
-        'deck': deck # 返回更新后的牌堆
-    }
+        # Dealer plays to completion
+        dealer_final_score = game_logic.dealer_ai_turn(
+            game_session.deck,
+            game_session.dealer_hand,
+            game_session.player_score
+        )
+        
+        # Determine result
+        result = game_logic.determine_result(game_session.player_score, dealer_final_score)
+        
+        # Update game session
+        update_game_session(
+            game_session,
+            dealer_score=dealer_final_score,
+            game_over=True
+        )
+        
+        # Handle payouts and records
+        balance = handle_game_end(game_session, result)
 
-    response = jsonify(response_data)
-    print('Stand response:', response.json)
-    return response
+        return jsonify({
+            'player_hand': game_session.player_hand,
+            'dealer_hand': game_session.dealer_hand,
+            'player_score': game_session.player_score,
+            'dealer_score': dealer_final_score,
+            'current_bet': game_session.current_bet,
+            'balance': balance,
+            'game_over': True,
+            'result': result,
+            'new_card': new_card
+        })
+        
+    except GameError as e:
+        return jsonify({'error': str(e)}), 401
+    except Exception as e:
+        logger.error(f"Error in double_down: {e}")
+        return jsonify({'error': '操作失败'}), 500
+
+@app.route('/api/user/status', methods=['GET'])
+def get_user_status():
+    """Get current user status."""
+    try:
+        user = get_current_user()
+        return jsonify({
+            'username': user.username,
+            'balance': user.balance,
+            'logged_in': True
+        })
+    except GameError as e:
+        return jsonify({'error': str(e)}), 401
+    except Exception as e:
+        logger.error(f"Error getting user status: {e}")
+        return jsonify({'error': '获取用户状态失败'}), 500
+

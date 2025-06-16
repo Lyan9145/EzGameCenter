@@ -1,4 +1,4 @@
-Flask[async]
+Flask
 Flask-SQLAlchemy
 SQLAlchemy
 Werkzeug

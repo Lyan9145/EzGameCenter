@@ -8,7 +8,6 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blackjack.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
-import blackjack_api
 
 @app.route('/')
 def home():
@@ -25,7 +24,6 @@ def register():
         username = request.form.get('username')
         password = request.form.get('password')
 
-        # 使用异步查询
         if User.query.filter_by(username=username).first():
             flash('用户名已存在', 'error')
             return redirect(url_for('register'))
@@ -44,7 +42,6 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
 
-        # 使用异步查询
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
             session['username'] = username
@@ -76,7 +73,21 @@ def blackjack_game():
     rankings_data = Ranking.query.order_by(Ranking.score.desc()).all()
     # 需要获取用户名，可以通过 user 关系访问
     player_scores_display = [{'username': r.user.username, 'score': r.score} for r in rankings_data]
-    return render_template('index.html', username=session['username'], player_scores=player_scores_display)
+    return render_template('blackjack.html', username=session['username'], player_scores=player_scores_display)
+
+@app.route('/api/user/info')
+def user_info():
+    if 'username' not in session:
+        return jsonify({'error': '未登录'}), 401
+
+    user = User.query.filter_by(username=session['username']).first()
+    if not user:
+        return jsonify({'error': '用户不存在'}), 404
+
+    return jsonify({
+        'username': user.username,
+        'balance': user.balance,
+    })
 
 @app.route('/api/user/stats')
 def user_stats():
@@ -102,12 +113,25 @@ def user_stats():
         'win_rate': wins / len(user_games) if user_games else 0
     })
 
+@app.route('/api/user/reset_balance', methods=['POST'])
+def reset_balance():
+    if 'username' not in session:
+        return jsonify({'error': '未登录'}), 401
+
+    user = User.query.filter_by(username=session['username']).first()
+    if not user:
+        return jsonify({'error': '用户不存在'}), 404
+
+    user.balance = 1000
+    db.session.commit()
+    flash('账户余额已重置为1000', 'success')
+    return jsonify({'success': True, 'new_balance': 1000})
+
+# API 路由
+from blackjack_api import *
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    # 为了运行异步 Flask 应用，需要使用 ASGI 服务器，例如 hypercorn
-    # 运行命令示例: hypercorn app:app -w 4 -k asyncio
-    # 在开发环境中，可以使用 debug=True 运行，但需要安装 gevent 或 eventlet
+    # print([rule.rule for rule in app.url_map.iter_rules()])
     app.run(debug=True)
-    # print("请使用 ASGI 服务器运行此应用，例如: hypercorn app:app -w 4 -k asyncio")

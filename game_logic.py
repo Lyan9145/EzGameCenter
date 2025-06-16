@@ -9,9 +9,17 @@ def shuffle_deck(deck):
     random.shuffle(deck)
 
 def deal_cards(deck, num_cards=2):
+    """Deal specified number of cards from deck."""
+    if len(deck) < num_cards:
+        raise ValueError("Not enough cards in deck")
     return [deck.pop() for _ in range(num_cards)]
 
+
 def calculate_score(hand):
+    """Calculate the best possible score for a hand."""
+    if not hand:
+        return 0
+        
     score = 0
     aces = 0
     
@@ -29,6 +37,11 @@ def calculate_score(hand):
         aces -= 1
     
     return score
+
+def is_blackjack(hand):
+    """Check if hand is a blackjack (21 with 2 cards)."""
+    return len(hand) == 2 and calculate_score(hand) == 21
+
 
 def determine_result(player_score, dealer_score):
     if player_score > 21:

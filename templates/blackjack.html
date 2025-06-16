@@ -9,7 +9,7 @@
             <div class="game-header">
                 <h2>Blackjack 21点</h2>
                 <div class="game-status">
-                    <span>余额: $<span id="balance">1000</span></span>
+                    <span>余额: $<span id="balance">?</span></span>
                     <span>当前下注: $<span id="current-bet">0</span></span>
                 </div>
             </div>
@@ -27,17 +27,16 @@
             </div>
 
             <div class="controls">
-                <button id="hit-btn" class="btn" onclick="hit()">要牌</button>
-                <button id="stand-btn" class="btn" onclick="stand()">停牌</button>
-<div class="bet-input">
-    <input type="number" id="bet-amount" name="bet-amount" placeholder="输入下注金额" required>
-    <button id="bet--btn" class="btn" onclick="placeBet(document.getElementById('bet-amount').value)">确定</button>
-</div>
+                <button id="hit-btn" class="btn">要牌</button>
+                <button id="stand-btn" class="btn">停牌</button>
+                <div class="bet-input">
+                    <input type="number" id="bet-amount" name="bet-amount" placeholder="输入下注金额" required>
+                    <button id="bet-btn" class="btn">开始游戏</button>
+                </div>
                 <div class="bet-recommended">
                     <button class="bet-btn" data-amount="10">$10</button>
                     <button class="bet-btn" data-amount="50">$50</button>
                     <button class="bet-btn" data-amount="100">$100</button>
-                    <button class="bet-btn" data-amount="double">加倍</button>
                 </div>
             </div>
         </div>
@@ -63,4 +62,5 @@
             </table>
         </div>
     </div>
+    <script src="{{ url_for('static', filename='blackjack.js') }}"></script>
 {% endblock %}

@@ -49,6 +49,10 @@
                 showToast('用户名和密码至少需要3个字符', 'warning');
                 return false;
             }
+            if (username.length > 30 || password.length > 30) {
+                showToast('用户名和密码不能超过30个字符', 'warning');
+                return false;
+            }
             if (password !== confirm_password) {
                 showToast('两次输入的密码不一致', 'error');
                 return false;

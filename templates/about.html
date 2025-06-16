@@ -63,4 +63,40 @@
         <p>学号：<strong>22211293</strong></p>
         <p>联系方式：<a href="mailto:22211293@bjtu.edu.cn" class="href">22211293@bjtu.edu.cn</a></p>
     </div>
+
+    {% if session.username %}
+    <h2>账户管理</h2>
+    <div class="account-management">
+        <p>如果您的账户余额不足，可以使用以下按钮重置余额：</p>
+        <button onclick="resetBalance()" class="reset-button" style="background-color: #ff6b6b; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px;">
+            重置余额为1000 (后悔按钮)
+        </button>
+    </div>
+
+    <script>
+    function resetBalance() {
+        if (confirm('确定要重置账户余额为1000吗？此操作不可撤销！')) {
+            fetch('/api/user/reset_balance', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('余额重置成功！新余额：' + data.new_balance);
+                    location.reload();
+                } else {
+                    alert('重置失败：' + (data.error || '未知错误'));
+                }
+            })
+            .catch(error => {
+                alert('请求失败：' + error.message);
+            });
+        }
+    }
+    </script>
+    {% endif %}
+
 {% endblock %}

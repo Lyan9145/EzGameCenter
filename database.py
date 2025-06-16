@@ -24,11 +24,13 @@ class JSONEncodedDict(TypeDecorator):
             value = json.loads(value)
         return value
 
+
 # Database Models
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
+    balance = db.Column(db.Integer, default=1000, nullable=False)  # Add this line
     game_sessions = relationship('GameSession', backref='user', lazy=True)
     rankings = relationship('Ranking', backref='user', lazy=True)
     game_records = relationship('GameRecord', backref='user', lazy=True)
