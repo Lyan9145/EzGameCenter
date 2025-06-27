@@ -3,32 +3,32 @@
 {% block title %}登录{% endblock %}
 
 {% block content %}
-    <div class="auth-page-container">
-        <div class="auth-form-section">
-            <h2>登录</h2>
+    <div class="flex flex-col md:flex-row bg-gray-800 rounded-lg shadow-lg overflow-hidden max-w-4xl mx-auto mt-12">
+        <div class="flex-1 bg-gray-700 p-8">
+            <h2 class="text-2xl font-bold text-white mb-6">登录</h2>
             <form method="post" onsubmit="return validateForm()">
-                <div class="form-group">
-                    <label for="username">用户名</label>
-                    <input type="text" id="username" name="username" placeholder="请输入用户名" required maxlength="20">
+                <div class="mb-4">
+                    <label for="username" class="block text-gray-300 mb-2">用户名</label>
+                    <input type="text" id="username" name="username" placeholder="请输入用户名" required maxlength="20" class="w-full p-3 rounded bg-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
-                <div class="form-group">
-                    <label for="password">密码</label>
-                    <input type="password" id="password" name="password" placeholder="请输入密码" required maxlength="20">
+                <div class="mb-4">
+                    <label for="password" class="block text-gray-300 mb-2">密码</label>
+                    <input type="password" id="password" name="password" placeholder="请输入密码" required maxlength="20" class="w-full p-3 rounded bg-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
-                <div class="form-group form-check">
-                    <input type="checkbox" class="form-check-input" id="remember" name="remember">
-                    <label class="form-check-label" for="remember">记住我</label>
+                <div class="flex items-center mb-6">
+                    <input type="checkbox" id="remember" name="remember" class="mr-2">
+                    <label for="remember" class="text-gray-300">记住我</label>
                 </div>
-                <button type="submit" class="btn btn-primary btn-block auth-submit-btn">登录</button>
+                <button type="submit" class="w-full bg-blue-500 text-white py-3 rounded hover:bg-blue-600 transition">登录</button>
             </form>
-            <div class="auth-extra-links">
-                <a href="{{ url_for('home') }}" class="text-link">返回首页</a>
+            <div class="mt-4 text-center">
+                <a href="{{ url_for('home') }}" class="text-blue-400 hover:underline">返回首页</a>
             </div>
         </div>
-        <div class="auth-info-section">
-            <h3>还没有账户？</h3>
-            <p>立即注册，体验更多精彩功能！</p>
-            <a href="{{ url_for('register') }}" class="btn btn-secondary btn-block">创建新账户</a>
+        <div class="flex-1 bg-gray-800 p-8 text-center flex flex-col justify-center items-center">
+            <h3 class="text-xl font-bold text-white mb-4">还没有账户？</h3>
+            <p class="text-gray-300 mb-6">立即注册，体验更多精彩功能！</p>
+            <a href="{{ url_for('register') }}" class="bg-transparent border-2 border-white text-white py-2 px-6 rounded hover:bg-white hover:text-gray-800 transition">创建新账户</a>
         </div>
     </div>
 

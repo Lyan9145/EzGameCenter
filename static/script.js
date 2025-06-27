@@ -1,3 +1,40 @@
+// Theme management
+const themeToggle = document.getElementById('themeToggle');
+const themeIcon = document.getElementById('themeIcon');
+
+// Initialize theme
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+        document.documentElement.classList.add('dark');
+        themeIcon.textContent = '☀️';
+    } else {
+        document.documentElement.classList.remove('dark');
+        themeIcon.textContent = '🌙';
+    }
+}
+
+// Toggle theme
+function toggleTheme() {
+    const isDark = document.documentElement.classList.contains('dark');
+    
+    if (isDark) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+        themeIcon.textContent = '🌙';
+    } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+        themeIcon.textContent = '☀️';
+    }
+}
+
+
+
+
+
 // 创建toast容器
 let toastContainer = null;
 
@@ -112,7 +149,10 @@ async function apiRequest(url, method = 'GET', data = null, showError = true) {
 document.addEventListener('DOMContentLoaded', function() {
     // 页面加载时获取用户信息
     // fetchUserInfo();
-    
+
+    // themeToggle.addEventListener('click', toggleTheme);
+    // Initialize theme on page load
+    // initTheme();
 });
 
 

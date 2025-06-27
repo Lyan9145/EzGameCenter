@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session, flash
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, flash, send_from_directory
 
 from database import db, User, GameSession, Ranking, GameRecord
 
@@ -75,6 +75,12 @@ def blackjack_game():
     player_scores_display = [{'username': r.user.username, 'score': r.score} for r in rankings_data]
     return render_template('blackjack.html', username=session['username'], player_scores=player_scores_display)
 
+@app.route('/freecell')
+def freecell_game():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    return render_template('freecell.html', username=session['username'])
+
 @app.route('/api/user/info')
 def user_info():
     if 'username' not in session:
@@ -127,8 +133,13 @@ def reset_balance():
     flash('账户余额已重置为1000', 'success')
     return jsonify({'success': True, 'new_balance': 1000})
 
+@app.route('/static/cards/<filename>')
+def serve_card(filename):
+    return send_from_directory('static/cards', filename)
+
 # API 路由
 from blackjack_api import *
+from freecell_api import *
 
 if __name__ == '__main__':
     with app.app_context():

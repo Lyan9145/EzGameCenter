@@ -3,59 +3,69 @@
 {% block title %}Blackjack 21点{% endblock %}
 
 {% block content %}
-    <h1>欢迎来到Blackjack游戏</h1>
-    <div class="game-container">
-        <div class="game-area">
-            <div class="game-header">
-                <h2>Blackjack 21点</h2>
-                <div class="game-status">
+    <!-- <style>
+        .horizontal-layout {
+            display: inline-block; /* Ensure cards are horizontally aligned */
+            margin-right: 10px; /* Add spacing between cards */
+        }
+        .card-suit {
+            width: 80px; /* Adjust card width */
+            height: auto; /* Maintain aspect ratio */
+        }
+    </style> -->
+    <h1 class="text-center text-3xl font-bold text-white my-8">欢迎来到Blackjack游戏</h1>
+    <div class="flex flex-col lg:flex-row gap-6 max-w-6xl mx-auto">
+        <div class="flex-1 bg-gray-800 rounded-lg p-6 shadow-lg">
+            <div class="border-b border-gray-600 pb-4 mb-6">
+                <h2 class="text-2xl font-bold text-white">Blackjack 21点</h2>
+                <div class="flex justify-between text-gray-300 mt-2">
                     <span>余额: $<span id="balance">?</span></span>
                     <span>当前下注: $<span id="current-bet">0</span></span>
                 </div>
             </div>
 
-            <div class="dealer-area">
-                <h3>庄家</h3>
-                <div class="cards" id="dealer-cards"></div>
-                <div class="score" id="dealer-score">点数: 0</div>
+            <div class="bg-gray-700 rounded-lg p-4 mb-6">
+                <h3 class="text-xl font-semibold text-white mb-4">庄家</h3>
+                <div class="flex flex-wrap gap-4" id="dealer-cards"></div>
+                <div class="text-gray-300 mt-4" id="dealer-score">点数: 0</div>
             </div>
 
-            <div class="player-area">
-                <h3>玩家</h3>
-                <div class="cards" id="player-cards"></div>
-                <div class="score" id="player-score">点数: 0</div>
+            <div class="bg-gray-700 rounded-lg p-4 mb-6 player-area">
+                <h3 class="text-xl font-semibold text-white mb-4">玩家</h3>
+                <div class="flex flex-wrap gap-4" id="player-cards"></div>
+                <div class="text-gray-300 mt-4" id="player-score">点数: 0</div>
             </div>
 
-            <div class="controls">
-                <button id="hit-btn" class="btn">要牌</button>
-                <button id="stand-btn" class="btn">停牌</button>
-                <div class="bet-input">
-                    <input type="number" id="bet-amount" name="bet-amount" placeholder="输入下注金额" required>
-                    <button id="bet-btn" class="btn">开始游戏</button>
+            <div class="flex flex-col gap-4">
+                <button id="hit-btn" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition">要牌</button>
+                <button id="stand-btn" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition">停牌</button>
+                <div class="flex items-center gap-4">
+                    <input type="number" id="bet-amount" name="bet-amount" placeholder="输入下注金额" required class="flex-1 p-2 rounded bg-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button id="bet-btn" class="flex-1 bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition">开始游戏</button>
                 </div>
-                <div class="bet-recommended">
-                    <button class="bet-btn" data-amount="10">$10</button>
-                    <button class="bet-btn" data-amount="50">$50</button>
-                    <button class="bet-btn" data-amount="100">$100</button>
+                <div class="flex gap-4">
+                    <button id="bet-btn-1" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition" data-amount="10">$10</button>
+                    <button id="bet-btn-2" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition" data-amount="50">$50</button>
+                    <button id="bet-btn-3" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition" data-amount="100">$100</button>
                 </div>
             </div>
         </div>
-        <div class="rankings">
-            <h2>实时排行榜</h2>
-            <table border="1">
+        <div class="flex-1 bg-gray-800 rounded-lg p-6 shadow-lg">
+            <h2 class="text-2xl font-bold text-white mb-4">实时排行榜</h2>
+            <table class="w-full border-collapse">
                 <thead>
-                    <tr>
-                        <th>排名</th>
-                        <th>用户名</th>
-                        <th>分数</th>
+                    <tr class="bg-gray-700 text-white">
+                        <th class="py-2 px-4 border border-gray-600">排名</th>
+                        <th class="py-2 px-4 border border-gray-600">用户名</th>
+                        <th class="py-2 px-4 border border-gray-600">分数</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for player in player_scores %}
-                    <tr>
-                        <td>{{ loop.index }}</td>
-                        <td>{{ player['username'] }}</td>
-                        <td>{{ player['score'] }}</td>
+                    <tr class="text-gray-300">
+                        <td class="py-2 px-4 border border-gray-600">{{ loop.index }}</td>
+                        <td class="py-2 px-4 border border-gray-600">{{ player['username'] }}</td>
+                        <td class="py-2 px-4 border border-gray-600">{{ player['score'] }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

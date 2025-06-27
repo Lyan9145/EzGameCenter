@@ -1,4 +1,5 @@
-body {
+/* All styles removed as Tailwind CSS is now used */
+{
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: #1a2a3a;
     color: #fff;
@@ -531,4 +532,11 @@ body.auth-body { /* Add this class to body in base.html for login/register pages
 .player-area > * {
     position: relative;
     z-index: 2;
+}
+
+.card-suit {
+    width: 20px;
+    height: 20px;
+    display: inline-block;
+    vertical-align: middle;
 }

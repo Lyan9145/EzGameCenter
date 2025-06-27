@@ -9,8 +9,8 @@ const elements = {
     hitBtn: document.getElementById('hit-btn'),
     standBtn: document.getElementById('stand-btn'),
     betAmountInput: document.getElementById('bet-amount'),
-    betSubmitBtn: document.getElementById('bet-submit-btn'),
-    betBtns: document.querySelectorAll('.bet-btn')
+    betSubmitBtn: document.getElementById('bet-btn'),
+    betBtns: document.querySelectorAll('#bet-btn-1, #bet-btn-2, #bet-btn-3')
 };
 
 // 游戏状态追踪
@@ -123,13 +123,8 @@ function updateGameUI(data) {
 
     // Update scores
     elements.playerScore.textContent = `点数: ${data.player_score || 0}`;
+    elements.dealerScore.textContent = `点数: ${data.dealer_score !== undefined ? data.dealer_score : '?'}`;
 
-    if (isGameOver) {
-        elements.dealerScore.textContent = `点数: ${data.dealer_score !== undefined ? data.dealer_score : '?'}`;
-    } else {
-        // Only show dealer's visible card score if game is not over
-        elements.dealerScore.textContent = `点数: ?`;
-    }
 
     // Update balance and current bet display
     elements.balance.textContent = data.balance !== undefined ? data.balance : elements.balance.textContent;
@@ -139,13 +134,19 @@ function updateGameUI(data) {
     recommendBets(data.balance !== undefined ? data.balance : parseInt(elements.balance.textContent));
 
     // Enable/disable hit/stand buttons based on game state
-    if (isGameOver) {
-        elements.hitBtn.disabled = true;
-        elements.standBtn.disabled = true;
-    } else {
-        elements.hitBtn.disabled = false;
-        elements.standBtn.disabled = false;
-    }
+    // if (isGameOver) {
+    //     elements.hitBtn.disabled = true;
+    //     elements.standBtn.disabled = true;
+    //     // 按钮变灰
+    //     elements.hitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    //     elements.standBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    // } else {
+    //     elements.hitBtn.disabled = false;
+    //     elements.standBtn.disabled = false;
+    //     // 恢复按钮样式
+    //     elements.hitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    //     elements.standBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    // }
 }
 
 // Helper function to calculate score on the frontend for displaying dealer's visible card score
@@ -175,12 +176,23 @@ function calculateScore(hand) {
 // 创建牌元素
 function createCardElement(card) {
     const cardEl = document.createElement('div');
-    cardEl.className = 'card';
-    
-    const suitSymbol = getSuitSymbol(card.suit);
-    cardEl.innerHTML = `<div class="card-value">${card.value}</div>
-                        <div class="card-suit">${suitSymbol}</div>`;
+    cardEl.className = 'card horizontal-layout'; // Add horizontal layout class
+    let cardValue = card.value;
 
+    if (cardValue === 'A') {
+        cardValue = 'ace';
+    } else if (cardValue === 'K') {
+        cardValue = 'king';
+    } else if (cardValue === 'Q') {
+        cardValue = 'queen';
+    } else if (cardValue === 'J') {
+        cardValue = 'jack';
+    }
+
+    // Use SVG images for card suits
+    const suitImage = `static/cards/${cardValue}_of_${card.suit}.svg`;
+    cardEl.innerHTML = `<img class="card-suit animate-fade-up" src="${suitImage}" alt="${card.suit}_${card.value}" style="width: 80px; height: auto;" />`; // Adjust size
+    cardEl.classList.add('transition-transform', 'duration-500', 'transform', 'translate-y-4'); // Tailwind CSS classes for animation
     return cardEl;
 }
 
@@ -226,23 +238,12 @@ function animatePlayerAreaResult(result) {
     const playerArea = document.querySelector('.player-area');
     if (!playerArea) return;
 
-    // 添加结果类和动画类
-    playerArea.classList.add(`result-${result}`, 'animating');
+    // 添加结果类和过渡效果
+    playerArea.classList.add(`bg-${result === 'win' ? 'green-500' : result === 'lose' ? 'red-500' : 'yellow-500'}`, 'transition-colors', 'duration-500');
 
-    // 移除动画类（遮罩动画完成）
+    // 3秒后恢复原背景色
     setTimeout(() => {
-        playerArea.classList.remove('animating');
-    }, 800);
-
-    // 3秒后恢复原背景色，再次使用遮罩动画
-    setTimeout(() => {
-        playerArea.classList.add('animating');
-        
-        // 在遮罩动画进行中移除结果类
-        setTimeout(() => {
-            playerArea.classList.remove(`result-${result}`);
-            playerArea.classList.remove('animating');
-        }, 800);
+        playerArea.classList.remove(`bg-${result === 'win' ? 'green-500' : result === 'lose' ? 'red-500' : 'yellow-500'}`);
     }, 3000);
 }
 
@@ -268,21 +269,41 @@ function placeBet(amount) {
 function lockBetControls() {
     if (elements.betAmountInput) elements.betAmountInput.disabled = true;
     if (elements.betSubmitBtn) elements.betSubmitBtn.disabled = true;
+    // 按钮变灰
+    elements.betAmountInput.classList.add('opacity-50', 'cursor-not-allowed');
+    elements.betSubmitBtn.classList.add('opacity-50', 'cursor-not-allowed');
     if (elements.betBtns) {
         elements.betBtns.forEach(btn => {
             btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed'); // Add disabled styles
         });
     }
+    // Enable hit and stand buttons
+    elements.hitBtn.disabled = false;
+    elements.standBtn.disabled = false;
+    // 恢复按钮样式
+    elements.hitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    elements.standBtn.classList.remove('opacity-50', 'cursor-not-allowed');
 }
 
 function unlockBetControls() {
-;    if (elements.betAmountInput) elements.betAmountInput.disabled = false;
+    if (elements.betAmountInput) elements.betAmountInput.disabled = false;
     if (elements.betSubmitBtn) elements.betSubmitBtn.disabled = false;
+    // 恢复按钮样式
+    elements.betAmountInput.classList.remove('opacity-50', 'cursor-not-allowed');
+    elements.betSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
     if (elements.betBtns) {
         elements.betBtns.forEach(btn => {
             btn.disabled = false;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed'); // Remove disabled styles
         });
     }
+    // Disable hit and stand buttons
+    elements.hitBtn.disabled = true;
+    elements.standBtn.disabled = true;
+    // 按钮变灰
+    elements.hitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    elements.standBtn.classList.add('opacity-50', 'cursor-not-allowed');
 }
 
 function recommendBets(balance) {
@@ -346,8 +367,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // 为推荐下注按钮添加监听器
-    const betButtons = document.querySelectorAll('.bet-btn');
-    betButtons.forEach(button => {
+    elements.betBtns.forEach(button => {
         button.addEventListener('click', function() {
             const amount = this.getAttribute('data-amount');
             const betAmountInput = document.getElementById('bet-amount');

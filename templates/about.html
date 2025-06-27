@@ -3,19 +3,18 @@
 {% block title %}关于我们 - EzGameCenter{% endblock %}
 
 {% block content %}
-    <h2>关于项目</h2>
-    <div class="about-content">
+    <h2 class="text-2xl font-bold text-center text-white my-8">关于项目</h2>
+    <div class="space-y-8 max-w-4xl mx-auto">
         <section>
-            <h3>项目介绍</h3>
-            <p>EzGameCenter是一个使用Flask框架开发的网页小游戏中心，目前已实现21点(Blackjack)游戏，未来将添加更多游戏。</p>
-            <p>项目Github链接：<a href="https://github.com/Lyan9145/EzGameCenter" target="_blank" rel="noopener" class="href">https://github.com/Lyan9145/EzGameCenter</a>
-            </p>
+            <h3 class="text-xl font-semibold text-white mb-4">项目介绍</h3>
+            <p class="text-gray-300">EzGameCenter是一个使用Flask框架开发的网页小游戏中心，目前已实现21点(Blackjack)游戏，未来将添加更多游戏。</p>
+            <p class="text-gray-300">项目Github链接：<a href="https://github.com/Lyan9145/EzGameCenter" target="_blank" rel="noopener" class="text-blue-400 hover:underline">https://github.com/Lyan9145/EzGameCenter</a></p>
         </section>
         
         <section>
-            <h3>技术架构</h3>
-            <p>后端采用了以下技术栈：</p>
-            <ul>
+            <h3 class="text-xl font-semibold text-white mb-4">技术架构</h3>
+            <p class="text-gray-300">后端采用了以下技术栈：</p>
+            <ul class="list-disc list-inside text-gray-300">
                 <li><strong>Web框架</strong>：Flask框架 + 异步支持（async/await）</li>
                 <li><strong>数据库</strong>：SQLite + SQLAlchemy ORM</li>
                 <li><strong>用户认证</strong>：Flask Session + Werkzeug安全密码哈希</li>
@@ -24,8 +23,8 @@
         </section>
         
         <section>
-            <h3>技术亮点</h3>
-            <ul>
+            <h3 class="text-xl font-semibold text-white mb-4">技术亮点</h3>
+            <ul class="list-disc list-inside text-gray-300">
                 <li><strong>异步API</strong>：使用Flask异步API处理游戏逻辑，提高并发性能</li>
                 <li><strong>会话持久化</strong>：游戏状态存储在数据库，支持断线重连</li>
                 <li><strong>庄家AI</strong>：实现智能庄家决策算法，根据牌局和风险动态决策</li>
@@ -35,9 +34,9 @@
         </section>
         
         <section>
-            <h3>数据模型</h3>
-            <p>系统包含以下核心数据模型：</p>
-            <ul>
+            <h3 class="text-xl font-semibold text-white mb-4">数据模型</h3>
+            <p class="text-gray-300">系统包含以下核心数据模型：</p>
+            <ul class="list-disc list-inside text-gray-300">
                 <li><strong>User</strong>：用户信息和认证</li>
                 <li><strong>GameSession</strong>：当前游戏会话状态（牌组、手牌、分数等）</li>
                 <li><strong>Ranking</strong>：用户排名记录</li>
@@ -46,9 +45,9 @@
         </section>
         
         <section>
-            <h3>黑杰克规则实现</h3>
-            <p>游戏实现了标准的21点规则：</p>
-            <ul>
+            <h3 class="text-xl font-semibold text-white mb-4">黑杰克规则实现</h3>
+            <p class="text-gray-300">游戏实现了标准的21点规则：</p>
+            <ul class="list-disc list-inside text-gray-300">
                 <li>A可作为1或11点，自动优化计分</li>
                 <li>庄家17点以下必须要牌，软17点也会要牌</li>
                 <li>玩家21点（黑杰克）直接胜利</li>
@@ -57,18 +56,18 @@
             </ul>
         </section>
     </div>
-<h2>作者信息</h2>
-    <div class="author-info">
+    <h2 class="text-2xl font-bold text-center text-white my-8">作者信息</h2>
+    <div class="text-gray-300 max-w-4xl mx-auto">
         <p>项目作者：<strong>张与司</strong></p>
         <p>学号：<strong>22211293</strong></p>
-        <p>联系方式：<a href="mailto:22211293@bjtu.edu.cn" class="href">22211293@bjtu.edu.cn</a></p>
+        <p>联系方式：<a href="mailto:22211293@bjtu.edu.cn" class="text-blue-400 hover:underline">22211293@bjtu.edu.cn</a></p>
     </div>
 
     {% if session.username %}
-    <h2>账户管理</h2>
-    <div class="account-management">
+    <h2 class="text-2xl font-bold text-center text-white my-8">账户管理</h2>
+    <div class="text-gray-300 max-w-4xl mx-auto">
         <p>如果您的账户余额不足，可以使用以下按钮重置余额：</p>
-        <button onclick="resetBalance()" class="reset-button" style="background-color: #ff6b6b; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px;">
+        <button onclick="resetBalance()" class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition mt-4">
             重置余额为1000 (后悔按钮)
         </button>
     </div>
@@ -98,5 +97,4 @@
     }
     </script>
     {% endif %}
-
 {% endblock %}

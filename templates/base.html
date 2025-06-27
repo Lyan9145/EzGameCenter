@@ -4,23 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}EzGameCenter{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
 </head>
-<body>
-    <nav class="navbar">
-        <div class="container">
-            <a class="navbar-brand" href="{{ url_for('home') }}">EzGameCenter</a>
-            <div class="navbar-links">
+<body class="bg-gray-900 text-white min-h-screen flex flex-col">
+    <nav class="bg-gray-800 py-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <a class="text-white text-xl font-bold" href="{{ url_for('home') }}">EzGameCenter</a>
+            <!-- <button id="themeToggle" class="text-white">
+                <span id="themeIcon">🌙</span>
+            </button> -->
+            <div class="flex space-x-4">
                 {% if session.get('username') %}
                     <span>欢迎, {{ session['username'] }}!</span>
-                    <a href="{{ url_for('rankings') }}">排行榜</a>
-                    <a href="{{ url_for('about') }}">关于</a>
-                    <a href="{{ url_for('logout') }}">退出登录</a>
+                    <a class="text-white hover:underline" href="{{ url_for('rankings') }}">排行榜</a>
+                    <a class="text-white hover:underline" href="{{ url_for('about') }}">关于</a>
+                    <a class="text-white hover:underline" href="{{ url_for('logout') }}">退出登录</a>
                 {% else %}
-                    <a href="{{ url_for('login') }}">登录</a>
-                    <a href="{{ url_for('register') }}">注册</a>
-                    <a href="{{ url_for('about') }}">关于</a>
+                    <a class="text-white hover:underline" href="{{ url_for('login') }}">登录</a>
+                    <a class="text-white hover:underline" href="{{ url_for('register') }}">注册</a>
+                    <a class="text-white hover:underline" href="{{ url_for('about') }}">关于</a>
                 {% endif %}
             </div>
         </div>
@@ -28,25 +35,27 @@
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
-        <ul class=flashes>
+        <ul class="container mx-auto mt-4 space-y-2">
         {% for category, message in messages %}
-          <li class="{{ category }}">{{ message }}</li>
+          <li class="p-4 rounded {{ 'bg-green-500' if category == 'success' else 'bg-red-500' if category == 'error' else 'bg-yellow-500' if category == 'warning' else 'bg-blue-500' }}">
+            {{ message }}
+          </li>
         {% endfor %}
         </ul>
       {% endif %}
     {% endwith %}
 
-    <div class="content">
+    <div class="container mx-auto flex-grow">
         {% block content %}{% endblock %}
     </div>
-<!-- 
-    <footer>
-        <div class="container">
-            <p>&copy; 2025 游戏平台. All rights reserved.</p>
-        </div>
-    </footer> -->
 
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <footer class="bg-gray-800 py-4">
+        <div class="container mx-auto text-center">
+            <p>&copy; By Zhang Yusi</p>
+        </div>
+    </footer>
+</body>
+</html>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
