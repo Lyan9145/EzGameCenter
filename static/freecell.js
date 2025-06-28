@@ -357,7 +357,21 @@ Game.prototype.Deck.prototype.Card.prototype.sameValue = function(other) {
  * The image name and location as a string. Used when creating the web page.
  */
 Game.prototype.Deck.prototype.Card.prototype.image = function() {
-    return `static/cards/${this.suit}_${this.value}.svg`;
+    let cardValue = this.value;
+
+    if (cardValue == 1) {
+        cardValue = 'ace';
+    } else if (cardValue == 13) {
+        cardValue = 'king';
+    } else if (cardValue == 12) {
+        cardValue = 'queen';
+    } else if (cardValue == 11) {
+        cardValue = 'jack';
+    }
+
+    // Use SVG images for card suits
+    const suitImage = `static/cards/${cardValue}_of_${this.suit}.svg`;
+    return suitImage;
 };
 
 /******************************************************************************/
@@ -388,7 +402,7 @@ UI.prototype.init = function() {
     // set up the help dialog and button
     this.help();
 
-    this.setup_secret();
+    // this.setup_secret();
 
     // initialise draggables
     this.create_draggables();
@@ -414,9 +428,8 @@ UI.prototype.add_cards = function() {
             img.src = card.image();
 
             card_div = document.createElement('div');
-            card_div.className = 'card';
+            card_div.className = 'card relative -top-[75%]'; // Tailwind classes for overlap
             card_div.id = card.id;
-            card_div.style.top = (25 * j).toString() + 'px';
             card_div.appendChild(img);
 
             col_div.appendChild(card_div);
