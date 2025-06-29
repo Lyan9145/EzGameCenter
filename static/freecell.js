@@ -81,19 +81,20 @@ Game.prototype.valid_drag_ids = function () {
 };
 
 /**
- * Create an array of ids of valid drop locations for the card. The ids are
- * the id attribute string in the DOM.
+ * 核心算法，判断一张牌是否可以放置到指定位置，返回一个列表
+ * free、suit、col
+ * 修改了valid_drop_ids函数，添加了对空列的检查
  */
-// 修改了valid_drop_ids函数，添加了对空列的检查
 Game.prototype.valid_drop_ids = function (card_id) {
     var drop_ids, i, free, suit_card, drag_card, card, col;
 
     drop_ids = [];
 
-    // the card being dragged
+    // 当前卡牌
     drag_card = this.deck.get_card(card_id);
 
-    // add empty freecells
+    // freecells
+    // 空的free
     for (i = 0; i < 4; i++) {
         free = this.free[i];
         if (free === null) {
@@ -101,7 +102,8 @@ Game.prototype.valid_drop_ids = function (card_id) {
         }
     }
 
-    // add a valid suit cell
+    // suitcell
+    // 空的suit（A）或符合值的suit
     for (i = 0; i < 4; i++) {
         suit_card = this.suits[i];
         if (suit_card === null) {
@@ -116,6 +118,7 @@ Game.prototype.valid_drop_ids = function (card_id) {
         }
     }
 
+    // col
     // 遍历所有8个列来决定是否可以作为放置点
     for (i = 0; i < 8; i++) {
         col = this.columns[i];
@@ -785,6 +788,7 @@ UI.prototype.create_droppables = function () {
             });
             drop_div.droppable('enable');
             if (droppable_hint_enabled) {
+                // 可放置提示
                 drop_div.addClass(droppable_hint_style);
             }
         }
@@ -854,8 +858,7 @@ UI.prototype.clear_drop = function () {
 
 UI.prototype.is_won = function () {
     if (this.game.is_game_won()) {
-        showToast('You have won the game!', type = 'success');
-
+        showToast('恭喜你，成功了!', type = 'success');
     }
 };
 
