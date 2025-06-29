@@ -1,5 +1,6 @@
 const droppable_hint_style = "ring-2 ring-green-400 hover:ring-4 hover:ring-green-500";
 let droppable_hint_enabled = true;
+var gamemode = 'random'; // Default game mode
 
 /**
  * Encapsulate the game
@@ -13,7 +14,7 @@ var Game = function () {
     this.columns = [[], [], [], [], [], [], [], []];
     // the deck of cards
     this.deck = new this.Deck();
-    // *** NEW: The history of moves for the undo function
+    // *** The history of moves for the undo function
     this.history = [];
 };
 
@@ -83,7 +84,7 @@ Game.prototype.valid_drag_ids = function () {
  * Create an array of ids of valid drop locations for the card. The ids are
  * the id attribute string in the DOM.
  */
-// 替换旧的 Game.prototype.valid_drop_ids 函数
+// 修改了valid_drop_ids函数，添加了对空列的检查
 Game.prototype.valid_drop_ids = function (card_id) {
     var drop_ids, i, free, suit_card, drag_card, card, col;
 
@@ -92,7 +93,7 @@ Game.prototype.valid_drop_ids = function (card_id) {
     // the card being dragged
     drag_card = this.deck.get_card(card_id);
 
-    // add empty freecells (这部分逻辑不变)
+    // add empty freecells
     for (i = 0; i < 4; i++) {
         free = this.free[i];
         if (free === null) {
@@ -100,7 +101,7 @@ Game.prototype.valid_drop_ids = function (card_id) {
         }
     }
 
-    // add a valid suit cell (这部分逻辑不变)
+    // add a valid suit cell
     for (i = 0; i < 4; i++) {
         suit_card = this.suits[i];
         if (suit_card === null) {
@@ -115,7 +116,6 @@ Game.prototype.valid_drop_ids = function (card_id) {
         }
     }
 
-    // *** 修改的部分在这里 ***
     // 遍历所有8个列来决定是否可以作为放置点
     for (i = 0; i < 8; i++) {
         col = this.columns[i];
@@ -197,7 +197,7 @@ Game.prototype.move_card = function (drag_id, drop_id) {
  * Return the card object and remove it from its current location
  * card_id is an integer.
  */
-Game.prototype.pop_card = function(card_id) {
+Game.prototype.pop_card = function (card_id) {
     var i, col, card;
 
     // check the bottom of each column
@@ -216,8 +216,8 @@ Game.prototype.pop_card = function(card_id) {
             return card;
         }
     }
-    
-    // *** NEW: Check suit piles (for the Undo function)
+
+    // 检查每个花色的牌（用于撤销功能）
     for (i = 0; i < 4; i++) {
         card = this.suits[i];
         if ((card !== null) && (card.id === card_id)) {
@@ -272,7 +272,7 @@ Game.prototype.is_game_won = function () {
     return true;
 };
 
-// *** NEW: Find where a card is coming from before a move.
+// *** Find where a card is coming from before a move.
 Game.prototype.find_source_id_for_card = function (card_id) {
     var i, col, card;
     // Check columns
@@ -294,8 +294,8 @@ Game.prototype.find_source_id_for_card = function (card_id) {
     return null; // Should not happen for a valid drag
 };
 
-// *** NEW: Place a card at a specific location, used by move_card and undo.
-Game.prototype.place_card = function(card_to_place, location_id) {
+// *** Place a card at a specific location, used by move_card and undo.
+Game.prototype.place_card = function (card_to_place, location_id) {
     if (typeof location_id === 'string' && location_id.startsWith('col')) {
         const index = parseInt(location_id.slice(-1), 10);
         this.columns[index].push(card_to_place);
@@ -312,14 +312,14 @@ Game.prototype.place_card = function(card_to_place, location_id) {
     }
 };
 
-// *** NEW: Undo the last move.
-Game.prototype.undo = function() {
+// 撤回逻辑实现
+Game.prototype.undo = function () {
     if (this.history.length === 0) {
         return false; // Nothing to undo
     }
 
     const lastMove = this.history.pop();
-    
+
     // Remove the card from where it was placed (`lastMove.to`)
     const card = this.pop_card(lastMove.cardId);
 
@@ -361,30 +361,32 @@ Game.prototype.Deck = function () {
 
 /**
  * shuffle the deck of cards
+ * 添加测试模式和随机模式
  */
-Game.prototype.Deck.prototype.shuffle = function() {
+Game.prototype.Deck.prototype.shuffle = function () {
     var len, i, j, item_j;
 
-    // useful for debugging - deal the cards in optimal order
-    this.cards.sort(function(a, b) {
-        if (a.value < b.value) {
-            return -1;
+    if (gamemode === 'test') {
+        // 排序，方便测试
+        this.cards.sort(function (a, b) {
+            if (a.value < b.value) {
+                return -1;
+            }
+            if (a.value > b.value) {
+                return 1;
+            }
+            return 0;
+        });
+        this.cards.reverse();
+    } else if (gamemode === 'random') {
+        len = this.cards.length;
+        for (i = 0; i < len; i++) {
+            j = Math.floor(len * Math.random());
+            item_j = this.cards[j];
+            this.cards[j] = this.cards[i];
+            this.cards[i] = item_j;
         }
-        if (a.value > b.value) {
-            return 1;
-        }
-        return 0;
-    });
-    this.cards.reverse();
-    
-
-    // len = this.cards.length;
-    // for (i = 0; i < len; i++) {
-    //     j = Math.floor(len * Math.random());
-    //     item_j = this.cards[j];
-    //     this.cards[j] = this.cards[i];
-    //     this.cards[i] = item_j;
-    // }
+    }
 };
 
 /**
@@ -439,6 +441,8 @@ Game.prototype.Deck.prototype.Card.prototype.sameValue = function (other) {
 
 /**
  * The image name and location as a string. Used when creating the web page.
+ * 重写实现读取SVG
+ * 使用GET: /static/cards/<filename> API
  */
 Game.prototype.Deck.prototype.Card.prototype.image = function () {
     let cardValue = this.value;
@@ -496,9 +500,7 @@ UI.prototype.init = function () {
     this.update_history_display();
 };
 
-/**
- * Add cards to the user interface with randomized animation.
- */
+// 添加动画
 UI.prototype.add_cards = function () {
     console.log('Adding cards to the UI with randomized animation');
     let card_counter = 0;
@@ -519,7 +521,7 @@ UI.prototype.add_cards = function () {
             // --- 样式设置 ---
             let classes = ['card', 'rounded', 'transition', 'duration-100', 'ease-in-out'];
             if (j > 0) {
-                classes.push('-mt-[88%]');
+                classes.push('-mt-[88%]'); // 如果不是第一张牌，设置上边距，实现层叠效果
             }
             card_div.className = classes.join(' ');
             card_div.appendChild(img);
@@ -527,7 +529,7 @@ UI.prototype.add_cards = function () {
             // 动画开始前，将卡片设置为透明，防止闪烁
             card_div.style.opacity = '0';
 
-            // --- 动画实现 (Web Animations API) ---
+            // 动画实现
 
             // 1. 定义随机参数
             const randomX = 45 + Math.random() * 10; // X轴起点在 45vw 到 55vw 之间
@@ -660,6 +662,7 @@ UI.prototype.dblclick_draggable = function (event) {
     }
 };
 
+// 完全重写，添加动画
 UI.prototype.dblclick_move = function (card_id, drop_id, this_ui) {
     const card = $('#' + card_id);
     const drop_div = $('#' + drop_id);
@@ -672,16 +675,16 @@ UI.prototype.dblclick_move = function (card_id, drop_id, this_ui) {
             $targetContainer = $slot;
         }
     }
-    
+
     // 2. 记录起始和结束位置
     const fromOffset = card.offset();
     const toOffset = $targetContainer.offset();
-    
+
     // 3. 清理旧样式并立即移动DOM
     if (drop_id.startsWith('suit')) $targetContainer.empty();
     card.removeClass('-mt-[88%]');
     card.appendTo($targetContainer);
-        
+
     // 4. 设置初始位置以防止闪烁
     card.css({
         position: 'relative', // 确保可以定位
@@ -689,15 +692,15 @@ UI.prototype.dblclick_move = function (card_id, drop_id, this_ui) {
         left: fromOffset.left - toOffset.left,
         zIndex: this_ui.card_max_zindex() + 1 // 确保在顶层
     });
-    
+
     // 5. 执行动画到最终位置
     card.animate({
         top: 0,
         left: 0
-    }, 200, function() {
+    }, 200, function () {
 
     });
-    
+
     // 6. 更新游戏逻辑状态
     this_ui.game.move_card(card_id, drop_id);
 
@@ -728,6 +731,7 @@ UI.prototype.card_max_zindex = function () {
  * use this as the callback for the start event of the drag. This is why it has
  * the two parameters (event, ui).
  */
+// 重写回调函数
 UI.prototype.create_droppables = function () {
     var this_ui;
     this_ui = this;
@@ -746,13 +750,13 @@ UI.prototype.create_droppables = function () {
 
             this_ui.drop.push(drop_div);
             drop_div.droppable({
-                tolerance: "pointer",
+                tolerance: "pointer", // 修复拖放时容差过小的问题
                 hoverClass: "bg-gray-600",
                 drop: function (event, ui) {
                     var this_id = $(this).attr('id');
                     var drag_id = parseInt(ui.draggable.attr('id'), 10);
                     var $card = ui.draggable;
-                    
+
                     let $targetContainer = $(this);
                     if (this_id.startsWith('free') || this_id.startsWith('suit')) {
                         let $slot = $(this).children('.slot');
@@ -819,7 +823,10 @@ UI.prototype.clear_drag = function () {
         this_ui.clear_drop();
 
         // create new draggables
-        this_ui.create_draggables();
+        // 修复在拖放结束后重新创建可拖动元素失败的问题
+        setTimeout(function () {
+            this_ui.create_draggables();
+        }, 0);
     };
 };
 
@@ -831,7 +838,7 @@ UI.prototype.clear_drop = function () {
 
     for (i = 0; i < this.drop.length; i++) {
         item = this.drop[i];
-        if (item.data('ui-droppable')) { 
+        if (item.data('ui-droppable')) {
             item.droppable('destroy');
         }
         try {
@@ -847,9 +854,8 @@ UI.prototype.clear_drop = function () {
 
 UI.prototype.is_won = function () {
     if (this.game.is_game_won()) {
-        // this.win_animation();
-        $('#windialog').dialog('open');
-        //return false;
+        showToast('You have won the game!', type = 'success');
+
     }
 };
 
@@ -914,34 +920,18 @@ UI.prototype.setup_secret = function () {
 };
 
 /**
- * Show the win dialog box
+ * Show the win dialog box 
+ * 取消原始设计
  */
 UI.prototype.win = function () {
-    $('#windialog').dialog({
-        title: 'Freecell',
-        modal: true,
-        show: 'blind',
-        autoOpen: false,
-        zIndex: 5000
-    });
+
 };
 
 /**
  * The help dialog
+ * 取消原始设计
  */
 UI.prototype.help = function () {
-    $('#helptext').dialog({
-        title: 'Help',
-        modal: true,
-        show: 'blind',
-        autoOpen: false,
-        zIndex: 5000,
-        minWidth: 550
-    });
-
-    $('#help').click(function () {
-        $('#helptext').dialog('open');
-    });
 
 };
 
@@ -952,37 +942,52 @@ UI.prototype.new_game = function () {
         this_ui.remove_cards();
         this_ui.add_cards();
         this_ui.create_draggables();
-        this_ui.update_history_display(); // *** NEW
+        this_ui.update_history_display(); // 更新历史记录显示
     });
 };
 
-// *** NEW SECTION FOR UNDO AND HISTORY UI ***
 
-/**
- * NEW: Sets up event listeners for the Undo button and Ctrl+Z shortcut.
- */
-// 修复后的代码
-UI.prototype.setup_controls = function() {
+// 设置控件事件
+UI.prototype.setup_controls = function () {
     const this_ui = this;
-    jQuery('#undo').on('click', function() {
+    // 设置撤销按钮
+    $('#undo').on('click', function () {
         this_ui.undo_action();
     });
-
-    jQuery(document).on('keydown', function(e) {
+    // 设置撤销按钮的键盘快捷键
+    $(document).on('keydown', function (e) {
         if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
             e.preventDefault();
             this_ui.undo_action();
         }
     });
-};
 
-/**
- * NEW: The main action for an undo operation.
- */
-UI.prototype.undo_action = function() {
+    // 可拖放提示
+    $('#droppable-hint').on('click', function () {
+        if (droppable_hint_enabled) {
+            droppable_hint_enabled = false;
+            $('#droppable-hint').removeClass("bg-purple-500 hover:bg-purple-600").addClass("bg-gray-500 hover:bg-purple-900");
+        } else {
+            droppable_hint_enabled = true;
+            $('#droppable-hint').removeClass("bg-gray-500 hover:bg-purple-900").addClass("bg-purple-500 hover:bg-purple-600");
+        }
+    });
+
+    // 设置发牌模式切换
+    $('#gamemodes').on('click', function () {
+        if (gamemode === 'test') {
+            gamemode = 'random';
+            $('#gamemodes').text('发牌模式: 随机');
+        } else {
+            gamemode = 'test';
+            $('#gamemodes').text('发牌模式: 测试');
+        }
+    });
+}
+// 设置撤销操作
+UI.prototype.undo_action = function () {
     const wasUndone = this.game.undo();
     if (wasUndone) {
-        // Redraw the entire board from the new game state
         this.remove_cards();
         this.draw_board_state();
         this.create_draggables();
@@ -990,12 +995,10 @@ UI.prototype.undo_action = function() {
     }
 };
 
-/**
- * NEW: A non-animated function to draw the board based on game state.
- * Used for redraws after an undo.
- */
-UI.prototype.draw_board_state = function() {
-    // Redraw columns
+// 重新绘制整个游戏状态
+// 这个函数会在撤销操作后调用，重新绘制所有牌面
+UI.prototype.draw_board_state = function () {
+    // columns
     for (let i = 0; i < 8; i++) {
         const col_div = document.getElementById('col' + i.toString());
         const cards = this.game.columns[i];
@@ -1006,7 +1009,7 @@ UI.prototype.draw_board_state = function() {
             const img = new Image();
             img.src = card.image();
             card_div.appendChild(img);
-            
+
             let classes = ['card', 'rounded'];
             if (j > 0) {
                 classes.push('-mt-[88%]');
@@ -1015,7 +1018,7 @@ UI.prototype.draw_board_state = function() {
             col_div.appendChild(card_div);
         }
     }
-    // Redraw freecells and suits
+    // freecells and suits
     ['free', 'suit'].forEach(type => {
         const sourceArray = type === 'free' ? this.game.free : this.game.suits;
         for (let i = 0; i < 4; i++) {
@@ -1034,10 +1037,9 @@ UI.prototype.draw_board_state = function() {
     });
 };
 
-/**
- * NEW: Updates the move count and the history list in the sidebar.
- */
-UI.prototype.update_history_display = function() {
+// 更新历史记录显示
+// 这个函数会在每次移动后调用，更新历史记录列表
+UI.prototype.update_history_display = function () {
     const history = this.game.history;
     $('#move-count').text(history.length);
 
@@ -1049,7 +1051,7 @@ UI.prototype.update_history_display = function() {
         return;
     }
 
-    // Helper to get a short, readable name for a card
+    // 将卡片ID转换为可读的名称
     const getCardName = (cardId) => {
         const card = this.game.deck.get_card(cardId);
         let val = card.value;
@@ -1062,7 +1064,7 @@ UI.prototype.update_history_display = function() {
         return `<span class="font-bold ${colorClass}">${val}${suitSymbols[card.suit]}</span>`;
     };
 
-    // Helper to get a readable name for a location
+    // 获取位置名称
     const getLocationName = (locId) => {
         if (typeof locId === 'string') {
             if (locId.startsWith('free')) return `Freecell ${parseInt(locId.slice(-1)) + 1}`;
@@ -1072,7 +1074,7 @@ UI.prototype.update_history_display = function() {
         return `card ${getCardName(locId)}`;
     };
 
-    // Show history in reverse order (latest move on top)
+    // 显示历史记录，最新的在顶部
     [...history].reverse().forEach((move, index) => {
         const toName = getLocationName(move.to);
         const cardName = getCardName(move.cardId);
