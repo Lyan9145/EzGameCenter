@@ -521,7 +521,7 @@ UI.prototype.add_cards = function () {
             const card_div = document.createElement('div');
             card_div.id = card.id;
 
-            // --- 样式设置 ---
+            // 样式设置 
             let classes = ['card', 'rounded', 'transition', 'duration-100', 'ease-in-out'];
             if (j > 0) {
                 classes.push('-mt-[88%]'); // 如果不是第一张牌，设置上边距，实现层叠效果
@@ -639,12 +639,12 @@ UI.prototype.dblclick_draggable = function (event) {
     var this_ui, drop_ids, card_id, drop_len, i, drop_id, drop_div;
     this_ui = event.data.this_ui;
 
-    // the valid drop locations for this card
+    // 获得可放置的ID列表
     card_id = parseInt(this.id, 10);
     drop_ids = this_ui.game.valid_drop_ids(card_id);
     drop_len = drop_ids.length;
 
-    // can the card be moved to a suit cell
+    // 优先检查是否可以放置到suit中
     for (i = 0; i < drop_len; i++) {
         drop_id = drop_ids[i];
         if (drop_id.substr(0, 4) === 'suit') {
@@ -654,7 +654,7 @@ UI.prototype.dblclick_draggable = function (event) {
         }
     }
 
-    // can the card be moved to an empty freecell
+    // 检查是否可以放置到freecell中
     for (i = 0; i < drop_len; i++) {
         drop_id = drop_ids[i];
         if (drop_id.substr(0, 4) === 'free') {

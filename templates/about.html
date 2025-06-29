@@ -7,7 +7,7 @@
     <div class="space-y-8 max-w-4xl mx-auto">
         <section>
             <h3 class="text-xl font-semibold text-white mb-4">项目介绍</h3>
-            <p class="text-gray-300">EzGameCenter是一个使用Flask框架开发的网页小游戏中心，目前已实现21点(Blackjack)游戏，未来将添加更多游戏。</p>
+            <p class="text-gray-300">EzGameCenter是一个使用Flask框架开发的网页小游戏中心，目前已实现21点(Blackjack)和纸牌接龙(FreeCell)。</p>
             <p class="text-gray-300">项目Github链接：<a href="https://github.com/Lyan9145/EzGameCenter" target="_blank" rel="noopener" class="text-blue-400 hover:underline">https://github.com/Lyan9145/EzGameCenter</a></p>
         </section>
         
@@ -15,44 +15,49 @@
             <h3 class="text-xl font-semibold text-white mb-4">技术架构</h3>
             <p class="text-gray-300">后端采用了以下技术栈：</p>
             <ul class="list-disc list-inside text-gray-300">
-                <li><strong>Web框架</strong>：Flask框架 + 异步支持（async/await）</li>
+                <li><strong>Web框架</strong>：Flask框架</li>
                 <li><strong>数据库</strong>：SQLite + SQLAlchemy ORM</li>
                 <li><strong>用户认证</strong>：Flask Session + Werkzeug安全密码哈希</li>
-                <li><strong>游戏逻辑</strong>：纯Python实现，支持完整21点规则</li>
+                <li><strong>游戏逻辑</strong>：21点采用纯Python实现，纸牌接龙采用JavaScript实现</li>
             </ul>
         </section>
         
         <section>
             <h3 class="text-xl font-semibold text-white mb-4">技术亮点</h3>
             <ul class="list-disc list-inside text-gray-300">
-                <li><strong>异步API</strong>：使用Flask异步API处理游戏逻辑，提高并发性能</li>
-                <li><strong>会话持久化</strong>：游戏状态存储在数据库，支持断线重连</li>
-                <li><strong>庄家AI</strong>：实现智能庄家决策算法，根据牌局和风险动态决策</li>
                 <li><strong>JSON序列化</strong>：自定义SQLAlchemy类型支持复杂游戏数据的存储与检索</li>
                 <li><strong>RESTful API</strong>：清晰的API设计，前后端分离架构</li>
+                <li><strong>前端框架</strong>：使用Tailwind CSS实现响应式设计和统一的视觉风格</li>
             </ul>
         </section>
-        
         <section>
-            <h3 class="text-xl font-semibold text-white mb-4">数据模型</h3>
-            <p class="text-gray-300">系统包含以下核心数据模型：</p>
+            <h3 class="text-xl font-semibold text-white mb-4">21点游戏介绍</h3>
+            <p class="text-gray-300">21点是一款经典的纸牌游戏，玩家需要通过合理的决策和运气来获得更高的分数。</p>
             <ul class="list-disc list-inside text-gray-300">
-                <li><strong>User</strong>：用户信息和认证</li>
-                <li><strong>GameSession</strong>：当前游戏会话状态（牌组、手牌、分数等）</li>
-                <li><strong>Ranking</strong>：用户排名记录</li>
-                <li><strong>GameRecord</strong>：历史游戏记录</li>
+                <li><strong>庄家AI</strong>：实现智能庄家决策算法，根据牌局和风险动态决策。</li>
+                <li><strong>防作弊设计</strong>：21点将算法放在后端，确保游戏公平性</li>
+                <li><strong>排行榜</strong>：记录玩家最高成绩并展示排行榜。</li>
             </ul>
         </section>
-        
         <section>
-            <h3 class="text-xl font-semibold text-white mb-4">黑杰克规则实现</h3>
-            <p class="text-gray-300">游戏实现了标准的21点规则：</p>
+            <h3 class="text-xl font-semibold text-white mb-4">FreeCell游戏介绍</h3>
+            <p class="text-gray-300">FreeCell是一款经典的纸牌接龙游戏，玩家需要通过合理的移动将所有牌按照规则排列到目标区域。</p>
             <ul class="list-disc list-inside text-gray-300">
-                <li>A可作为1或11点，自动优化计分</li>
-                <li>庄家17点以下必须要牌，软17点也会要牌</li>
-                <li>玩家21点（黑杰克）直接胜利</li>
-                <li>支持玩家操作：要牌、停牌、双倍下注</li>
-                <li>完整的胜负和平局判定逻辑</li>
+                <li><strong>视觉效果优化</strong>：采用Tailwind CSS框架实现统一的视觉风格和响应式设计。</li>
+                <li><strong>拖拽动画</strong>：使用jQuery和CSS实现卡牌拖拽和发牌动画，提升游戏的动态性。</li>
+                <li><strong>提示功能</strong>：添加可放置位置的提示，通过绿框指示可移动的目标区域。</li>
+                <li><strong>历史记录与撤回</strong>：支持操作历史记录和撤回功能。</li>
+            </ul>
+        </section>
+        <section>
+            <h3 class="text-xl font-semibold text-white mb-4">未来计划</h3>
+            <p class="text-gray-300">我们计划在未来版本中实现以下功能：</p>
+            <ul class="list-disc list-inside text-gray-300">
+                <li><strong>多张牌快捷移动</strong>：支持一次性移动多张牌到目标位置。</li>
+                <li><strong>服务端验证胜利</strong>：确保游戏规则的正确性和公平性。</li>
+                <li><strong>分数计算和排行榜</strong>：记录玩家成绩并展示排行榜。</li>
+                <li><strong>算法验证牌局可行性</strong>：确保每局游戏的可玩性。</li>
+                <li><strong>自动游戏功能</strong>：实现自动完成游戏的功能，供玩家娱乐。</li>
             </ul>
         </section>
     </div>
@@ -84,14 +89,14 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('余额重置成功！新余额：' + data.new_balance);
+                    showToast('余额重置成功！新余额：' + data.new_balance, 'info');
                     location.reload();
                 } else {
-                    alert('重置失败：' + (data.error || '未知错误'));
+                    showToast('重置失败：' + (data.error || '未知错误'), 'error');
                 }
             })
             .catch(error => {
-                alert('请求失败：' + error.message);
+                showToast('请求失败：' + error.message, 'error');
             });
         }
     }
