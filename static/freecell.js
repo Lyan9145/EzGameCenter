@@ -487,7 +487,7 @@ UI.prototype.init = function () {
     this.add_cards();
 
     // set up the win dialog
-    this.win();
+    // this.win();
     // set up the new game button
     this.new_game();
     // set up the help dialog and button
@@ -503,11 +503,13 @@ UI.prototype.init = function () {
     this.update_history_display();
 };
 
-// 添加动画
+// 添加动画，等所有图片加载完成后再开始动画
 UI.prototype.add_cards = function () {
-    console.log('Adding cards to the UI with randomized animation');
     let card_counter = 0;
+    const allCardDivs = [];
+    const allImages = [];
 
+    // 1. 先创建所有卡片DOM和图片对象，收集到数组
     for (let i = 0; i < 8; i++) {
         const cards = this.game.columns[i];
         const num_cards = cards.length;
@@ -521,52 +523,72 @@ UI.prototype.add_cards = function () {
             const card_div = document.createElement('div');
             card_div.id = card.id;
 
-            // 样式设置 
             let classes = ['card', 'rounded', 'transition', 'duration-100', 'ease-in-out'];
             if (j > 0) {
-                classes.push('-mt-[88%]'); // 如果不是第一张牌，设置上边距，实现层叠效果
+                classes.push('-mt-[88%]');
             }
             card_div.className = classes.join(' ');
             card_div.appendChild(img);
 
-            // 动画开始前，将卡片设置为透明，防止闪烁
             card_div.style.opacity = '0';
 
-            // 动画实现
-
-            // 1. 定义随机参数
-            const randomX = 45 + Math.random() * 10; // X轴起点在 45vw 到 55vw 之间
-            const randomY = -45 - Math.random() * 10; // Y轴起点在 -45vh 到 -55vh 之间
-            const randomRotate = -20 + Math.random() * 40; // 旋转角度在 -20deg 到 20deg 之间
-            const randomDuration = 500 + Math.random() * 200; // 动画时长在 500ms 到 700ms 之间
-
-            // 2. 定义关键帧
-            const keyframes = [
-                { // from
-                    transform: `translate(${randomX}vw, ${randomY}vh) scale(0.3) rotate(${randomRotate}deg)`,
-                    opacity: 0
-                },
-                { // to
-                    transform: 'translate(0, 0) scale(1) rotate(0deg)',
-                    opacity: 1
-                }
-            ];
-
-            // 3. 定义动画选项
-            const options = {
-                duration: randomDuration,
-                easing: 'ease-out',
-                delay: card_counter * 20, // 延迟仍然是递增的，但可以稍微缩短间隔
-                fill: 'forwards' // 动画结束后保持最终状态
-            };
-
-            // 4. 执行动画
-            card_div.animate(keyframes, options);
-
+            // 先插入DOM，后续动画
             col_div.appendChild(card_div);
+
+            allCardDivs.push({ card_div, card_counter });
+            allImages.push(img);
             card_counter++;
         }
     }
+
+    // 2. 等所有图片加载完成后再统一执行动画
+    let loadedCount = 0;
+    const totalImages = allImages.length;
+    if (totalImages === 0) return;
+
+    function tryStartAnimation() {
+        loadedCount++;
+        if (loadedCount === totalImages) {
+            // 所有图片加载完毕，开始动画
+            allCardDivs.forEach(({ card_div, card_counter }) => {
+                const randomX = 45 + Math.random() * 10;
+                const randomY = -45 - Math.random() * 10;
+                const randomRotate = -20 + Math.random() * 40;
+                const randomDuration = 500 + Math.random() * 200;
+
+                const keyframes = [
+                    {
+                        transform: `translate(${randomX}vw, ${randomY}vh) scale(0.3) rotate(${randomRotate}deg)`,
+                        opacity: 0
+                    },
+                    {
+                        transform: 'translate(0, 0) scale(1) rotate(0deg)',
+                        opacity: 1
+                    }
+                ];
+
+                const options = {
+                    duration: randomDuration,
+                    easing: 'ease-out',
+                    delay: card_counter * 20,
+                    fill: 'forwards'
+                };
+
+                card_div.animate(keyframes, options);
+            });
+        }
+    }
+
+    // 3. 监听所有图片加载
+    allImages.forEach(img => {
+        if (img.complete) {
+            // 已经加载
+            tryStartAnimation();
+        } else {
+            img.onload = tryStartAnimation;
+            img.onerror = tryStartAnimation; // 防止某些图片加载失败导致卡死
+        }
+    });
 };
 
 /**

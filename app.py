@@ -137,6 +137,11 @@ def reset_balance():
 def serve_card(filename):
     return send_from_directory('static/cards', filename)
 
+
+@app.route('/favicon.png')
+def favicon():
+    return send_from_directory('static', 'favicon.png', mimetype='image/png')
+
 # API 路由
 from blackjack_api import *
 from freecell_api import *
