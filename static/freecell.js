@@ -51,6 +51,54 @@ Game.prototype.reset = function () {
 
     this.init();
 };
+// 检查是否为有效
+// 规则：每张牌下面的牌是否与其花色相反，数值是否比其小1，
+// 从每列顶部开始向下检查，如果从某张牌开始直到本列最后一张牌都符合，则构成有效牌堆
+// 如果card_id为有效牌堆中的牌，返回true
+// 限制最大可移动牌数为 (n+1)*2^m
+Game.prototype.valid_stack = function (card_id) {
+    for (var i = 0; i < 8; i++) {
+        var col = this.columns[i];
+        var idx = -1;
+        // 找到card_id在本列的位置
+        for (var j = 0; j < col.length; j++) {
+            if (col[j].id === card_id) {
+                idx = j;
+                break;
+            }
+        }
+        if (idx === -1) continue; // 本列没有这张牌
+        // 检查从idx到列底部是否为合法递减、颜色交替的序列
+        for (var k = idx; k < col.length - 1; k++) {
+            var upper = col[k];
+            var lower = col[k + 1];
+            if (upper.value !== lower.value + 1) return false;
+            if (upper.colour === lower.colour) return false;
+        }
+        // 如果idx不是最后一张牌（即不是列底），且上面检查通过，则是有效牌堆
+        if (idx < col.length - 1) {
+            // 计算空闲cell数n
+            var n = 0;
+            for (var f = 0; f < 4; f++) {
+                if (this.free[f] === null) n++;
+            }
+            // 计算空闲column数m（不含本列）
+            var m = 0;
+            for (var c = 0; c < 8; c++) {
+                if (c !== i && this.columns[c].length === 0) m++;
+            }
+            // 允许的最大可移动牌数
+            var maxMove = (n + 1) * Math.pow(2, m);
+            var stackLen = col.length - idx;
+            if (stackLen <= maxMove) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+    return false;
+};
 
 /**
  * Create an array of ids of the valid draggable cards.
@@ -74,6 +122,12 @@ Game.prototype.valid_drag_ids = function () {
         if (col_len > 0) {
             card = col[col_len - 1];
             drag_ids.push(card.id.toString());
+        }
+        // 以及合法牌堆中的牌
+        for (var j = 0; j < col.length; j++) {
+            if (this.valid_stack(col[j].id)) {
+                drag_ids.push(col[j].id.toString());
+            }
         }
     }
 
