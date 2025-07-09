@@ -52,6 +52,29 @@ Game.prototype.reset = function () {
     this.init();
 };
 
+// 检查是否为有效
+// 规则：每张牌下面的牌是否与其花色相反，数值是否比其小1，
+// 从每列顶部开始向下检查，如果从某张牌开始直到本列最后一张牌都符合，则构成有效牌堆
+// 如果card_id为有效牌堆中的牌，返回true
+Game.prototype.valid_stack = function (card_id) {
+    var i, col, card;
+
+    for (i = 0; i < 8; i++) {
+        col = this.columns[i];
+        if (col.length > 0 && col[col.length - 1].id === card_id) {
+            // Check the stack below this card
+            for (var j = col.length - 2; j >= 0; j--) {
+                card = col[j];
+                if (card.suit === col[col.length - 1].suit || card.value !== col[col.length - 1].value - 1) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+    return false;
+};  
+
 /**
  * Create an array of ids of the valid draggable cards.
  */
@@ -68,12 +91,19 @@ Game.prototype.valid_drag_ids = function () {
         }
     }
     // add cards at the bottom of columns
+    // 以及合法牌堆中的牌
     for (i = 0; i < 8; i++) {
         col = this.columns[i];
         col_len = col.length;
         if (col_len > 0) {
             card = col[col_len - 1];
             drag_ids.push(card.id.toString());
+        }
+        // add valid stack cards
+        for (var j = 0; j < col.length; j++) {
+            if (this.valid_stack(col[j].id)) {
+                drag_ids.push(col[j].id.toString());
+            }
         }
     }
 
@@ -275,6 +305,8 @@ Game.prototype.is_game_won = function () {
     return true;
 };
 
+
+
 // *** Find where a card is coming from before a move.
 Game.prototype.find_source_id_for_card = function (card_id) {
     var i, col, card;
@@ -473,7 +505,7 @@ Game.prototype.Deck.prototype.Card.prototype.image = function () {
 var UI = function (game) {
     this.game = game;
     // an array of all the draggables
-    this.drag = [];
+    // this.drag = [];
     // an array of all the droppables
     this.drop = [];
 };
@@ -489,9 +521,9 @@ UI.prototype.init = function () {
     // set up the win dialog
     // this.win();
     // set up the new game button
-    this.new_game();
+    // this.new_game();
     // set up the help dialog and button
-    this.help();
+    // this.help();
 
     // this.setup_secret();
 
@@ -595,62 +627,19 @@ UI.prototype.add_cards = function () {
  * Remove the cards from the user interface
  */
 UI.prototype.remove_cards = function () {
-    var i;
-
-    for (i = 0; i < 8; i++) {
-        $('#col' + i.toString()).empty();
+    for (let i = 0; i < 8; i++) {
+        const col = document.getElementById('col' + i);
+        if (col) col.innerHTML = '';
     }
-    for (i = 0; i < 4; i++) {
-        $('#free' + i.toString()).children(".slot").empty();
-    }
-    for (i = 0; i < 4; i++) {
-        $('#suit' + i.toString()).children(".slot").empty();
-    }
-};
-
-/**
- * Create draggables: cards in the freecells and at the bottoms of all the
- * columns can be dragged.
- */
-UI.prototype.create_draggables = function () {
-    var card_ids, card_count, i, id, card_div, this_ui;
-
-    card_ids = this.game.valid_drag_ids();
-    card_count = card_ids.length;
-    this_ui = this;
-
-    for (i = 0; i < card_count; i++) {
-        id = card_ids[i];
-        card_div = $('#' + id);
-
-        // add to the list of draggables
-        this_ui.drag.push(card_div);
-
-        card_div.draggable({
-            stack: '.card',
-            containment: '#table',
-            revert: 'invalid',
-            revertDuration: 200,
-            start: this_ui.create_droppables(),
-            stop: this_ui.clear_drag()
-        });
-        card_div.draggable('enable');
-
-        // add double-click event handling to all draggables
-        card_div.bind('dblclick', { this_ui: this_ui }, this_ui.dblclick_draggable);
-
-        card_div.hover(
-            // hover start
-            function (event) {
-                $(this).addClass('ring-2 ring-blue-400');
-            },
-            // hover end
-            function (event) {
-                $(this).removeClass('ring-2 ring-blue-400');
-            }
-        );
+    for (let i = 0; i < 4; i++) {
+        const freeSlot = document.querySelector('#free' + i + ' .slot');
+        if (freeSlot) freeSlot.innerHTML = '';
+        const suitSlot = document.querySelector('#suit' + i + ' .slot');
+        if (suitSlot) suitSlot.innerHTML = '';
     }
 };
+
+
 
 /**
  * When a draggable card is at the bottom of a column and it is double-clicked,
@@ -658,164 +647,250 @@ UI.prototype.create_draggables = function () {
  * then move it.
  */
 UI.prototype.dblclick_draggable = function (event) {
-    var this_ui, drop_ids, card_id, drop_len, i, drop_id, drop_div;
-    this_ui = event.data.this_ui;
+    const card_id = parseInt(event.currentTarget.id, 10);
+    const drop_ids = this.game.valid_drop_ids(card_id);
 
-    // 获得可放置的ID列表
-    card_id = parseInt(this.id, 10);
-    drop_ids = this_ui.game.valid_drop_ids(card_id);
-    drop_len = drop_ids.length;
+    // Prioritize moving to a suit pile
+    let target_drop_id = drop_ids.find(id => id.startsWith('suit'));
 
-    // 优先检查是否可以放置到suit中
-    for (i = 0; i < drop_len; i++) {
-        drop_id = drop_ids[i];
-        if (drop_id.substr(0, 4) === 'suit') {
-            this_ui.dblclick_move(card_id, drop_id, this_ui);
-            this_ui.update_history_display();
-            return;
-        }
+    // If not, try moving to a freecell
+    if (!target_drop_id) {
+        target_drop_id = drop_ids.find(id => id.startsWith('free'));
     }
 
-    // 检查是否可以放置到freecell中
-    for (i = 0; i < drop_len; i++) {
-        drop_id = drop_ids[i];
-        if (drop_id.substr(0, 4) === 'free') {
-            this_ui.dblclick_move(card_id, drop_id, this_ui);
-            this_ui.update_history_display();
-            return;
-        }
+    if (target_drop_id) {
+        this.dblclick_move(card_id, target_drop_id);
+        this.update_history_display();
     }
 };
 
 // 完全重写，添加动画
-UI.prototype.dblclick_move = function (card_id, drop_id, this_ui) {
-    const card = $('#' + card_id);
-    const drop_div = $('#' + drop_id);
+UI.prototype.dblclick_move = function (card_id, drop_id) {
+    const card = document.getElementById(card_id);
+    const drop_div = document.getElementById(drop_id);
 
-    // 1. 决定最终目标容器
-    let $targetContainer = drop_div;
+    let targetContainer = drop_div;
     if (drop_id.startsWith('free') || drop_id.startsWith('suit')) {
-        let $slot = drop_div.children('.slot');
-        if ($slot.length > 0) {
-            $targetContainer = $slot;
-        }
+        const slot = drop_div.querySelector('.slot');
+        if (slot) targetContainer = slot;
     }
 
-    // 2. 记录起始和结束位置
-    const fromOffset = card.offset();
-    const toOffset = $targetContainer.offset();
+    const fromRect = card.getBoundingClientRect();
 
-    // 3. 清理旧样式并立即移动DOM
-    if (drop_id.startsWith('suit')) $targetContainer.empty();
-    card.removeClass('-mt-[88%]');
-    card.appendTo($targetContainer);
+    // Temporarily move the card to its new parent to calculate the final position
+    if (drop_id.startsWith('suit')) targetContainer.innerHTML = '';
+    card.classList.remove('-mt-[88%]');
+    targetContainer.appendChild(card);
+    const toRect = card.getBoundingClientRect();
 
-    // 4. 设置初始位置以防止闪烁
-    card.css({
-        position: 'relative', // 确保可以定位
-        top: fromOffset.top - toOffset.top,
-        left: fromOffset.left - toOffset.left,
-        zIndex: this_ui.card_max_zindex() + 1 // 确保在顶层
-    });
+    // Calculate the starting transform to make it appear to animate from the old position
+    const initialTop = fromRect.top - toRect.top;
+    const initialLeft = fromRect.left - toRect.left;
 
-    // 5. 执行动画到最终位置
-    card.animate({
-        top: 0,
-        left: 0
-    }, 200, function () {
+    // Use Web Animations API for a smooth transition
+    card.animate([
+        { transform: `translate(${initialLeft}px, ${initialTop}px)`, zIndex: this.card_max_zindex() + 1 },
+        { transform: 'translate(0, 0)', zIndex: 'auto' }
+    ], {
+        duration: 200,
+        easing: 'ease-out'
+    }).onfinish = () => {
+        // After animation, re-evaluate all draggables for the new game state
+        this.create_draggables();
+    };
 
-    });
-
-    // 6. 更新游戏逻辑状态
-    this_ui.game.move_card(card_id, drop_id);
-
-    // 7. 清理并重新创建拖拽逻辑
-    this_ui.clear_drag()(); // clear_drag返回一个函数，需要立即执行它
-
-    // 8. 检查是否获胜
-    this_ui.is_won();
+    // Update the game logic and check for a win
+    this.game.move_card(card_id, drop_id);
+    this.is_won();
 };
 
 UI.prototype.card_max_zindex = function () {
-    var max_z = 0;
-    $('.card').each(function (i, el) {
-        z_index = parseInt($(el).css('z-index'), 10);
-        if (!isNaN(z_index) && z_index > max_z) {
-            max_z = z_index;
+    let max_z = 0;
+    document.querySelectorAll('.card').forEach(el => {
+        const z_index_str = window.getComputedStyle(el).zIndex;
+        if (z_index_str !== 'auto') {
+            const z_index = parseInt(z_index_str, 10);
+            if (z_index > max_z) max_z = z_index;
         }
     });
     return max_z;
 };
 
+
 /**
- * Create droppables: when a card is dragged, decide where it can be dropped.
- * this method should be called when a card drag is started.
- *
- * This method should use Game methods to make decisions.
- *
- * use this as the callback for the start event of the drag. This is why it has
- * the two parameters (event, ui).
+ * Create draggables: make valid cards draggable.
+ * This function now re-evaluates and resets all event listeners for draggable cards.
  */
-// 重写回调函数
-UI.prototype.create_droppables = function () {
-    var this_ui;
-    this_ui = this;
+UI.prototype.create_draggables = function () {
+    document.querySelectorAll('.card').forEach(card => {
+        card.style.opacity = '1';
+        card.replaceWith(card.cloneNode(true));
+    });
 
-    var droppers = function (event, ui) {
-        var drop_ids, i, drop_id, drag_id;
+    const card_ids = this.game.valid_drag_ids();
 
-        drag_id = parseInt($(this).attr('id'), 10);
-        drop_ids = this_ui.game.valid_drop_ids(drag_id);
+    card_ids.forEach(id => {
+        const card_div = document.getElementById(id);
+        if (!card_div) return;
 
-        for (i = 0; i < drop_ids.length; i++) {
-            drop_id = drop_ids[i];
-            let drop_div_id = drop_id.toString();
-            // If dropping on a card, the droppable is the card itself.
-            let drop_div = $('#' + drop_div_id);
+        card_div.addEventListener('pointerdown', this.handle_pointer_down.bind(this));
+        card_div.addEventListener('dblclick', this.dblclick_draggable.bind(this));
+        card_div.addEventListener('mouseenter', e => e.currentTarget.classList.add('ring-2', 'ring-blue-400'));
+        card_div.addEventListener('mouseleave', e => e.currentTarget.classList.remove('ring-2', 'ring-blue-400'));
+    });
+};
 
-            this_ui.drop.push(drop_div);
-            drop_div.droppable({
-                tolerance: "pointer", // 修复拖放时容差过小的问题
-                hoverClass: "bg-gray-600",
-                drop: function (event, ui) {
-                    var this_id = $(this).attr('id');
-                    var drag_id = parseInt(ui.draggable.attr('id'), 10);
-                    var $card = ui.draggable;
+UI.prototype.handle_pointer_down = function (event) {
+    const card_div = event.currentTarget;
+    const drag_id = parseInt(card_div.id, 10);
+    const drop_ids = this.game.valid_drop_ids(drag_id);
 
-                    let $targetContainer = $(this);
-                    if (this_id.startsWith('free') || this_id.startsWith('suit')) {
-                        let $slot = $(this).children('.slot');
-                        if ($slot.length > 0) $targetContainer = $slot;
-                    }
+    let startX = event.clientX;
+    let startY = event.clientY;
 
-                    if (this_id.startsWith('suit')) $targetContainer.empty();
+    const moveHandler = (moveEvent) => {
+        const deltaX = moveEvent.clientX - startX;
+        const deltaY = moveEvent.clientY - startY;
+        card_div.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+    };
 
-                    $card.appendTo($targetContainer);
-                    $card.css({ top: 0, left: 0 });
+    const upHandler = (upEvent) => {
+        document.removeEventListener('pointermove', moveHandler);
+        document.removeEventListener('pointerup', upHandler);
 
-                    if ($(this).hasClass('column')) {
-                        if ($(this).children('.card').length > 1) {
-                            $card.addClass('-mt-[88%]');
-                        } else {
-                            $card.removeClass('-mt-[88%]');
-                        }
-                    } else {
-                        $card.removeClass('-mt-[88%]');
-                    }
+        card_div.style.transform = ''; // Reset transform
 
-                    this_ui.game.move_card(drag_id, this_id);
-                    this_ui.update_history_display();
-                    this_ui.is_won();
-                }
-            });
-            drop_div.droppable('enable');
-            if (droppable_hint_enabled) {
-                // 可放置提示
-                drop_div.addClass(droppable_hint_style);
-            }
+        const drop_target = document.elementFromPoint(upEvent.clientX, upEvent.clientY);
+        if (drop_target && drop_ids.includes(drop_target.id)) {
+            this.handle_drop(card_div.id, drop_target.id);
         }
     };
-    return droppers;
+
+    document.addEventListener('pointermove', moveHandler);
+    document.addEventListener('pointerup', upHandler);
+};
+
+UI.prototype.handle_drop = function (drag_id, drop_id) {
+    const card = document.getElementById(drag_id);
+    const drop_div = document.getElementById(drop_id);
+
+    let targetContainer = drop_div;
+    if (drop_id.startsWith('free') || drop_id.startsWith('suit')) {
+        const slot = drop_div.querySelector('.slot');
+        if (slot) targetContainer = slot;
+    }
+
+    if (drop_id.startsWith('suit')) targetContainer.innerHTML = '';
+
+    targetContainer.appendChild(card);
+    card.style.top = '0';
+    card.style.left = '0';
+
+    if (drop_div.classList.contains('column')) {
+        card.classList.toggle('-mt-[88%]', drop_div.children.length > 1);
+    } else {
+        card.classList.remove('-mt-[88%]');
+    }
+
+    this.game.move_card(parseInt(drag_id, 10), drop_id);
+    this.update_history_display();
+    this.is_won();
+};
+
+
+/**
+ * Create droppables: when a card is dragged, decide where it can be dropped.
+ */
+UI.prototype.create_droppables = function (drag_id) {
+    const drop_ids = this.game.valid_drop_ids(drag_id);
+    this.drop = []; // Reset the list of current droppables
+
+    drop_ids.forEach(drop_id => {
+        const drop_div = document.getElementById(drop_id);
+        if (!drop_div) return;
+
+        this.drop.push(drop_div);
+
+        // // Add drop zone event listeners
+        // Use pointer events for highlighting and click-to-drop
+        drop_div.addEventListener('pointerenter', e => drop_div.classList.add('bg-gray-600'));
+        drop_div.addEventListener('pointerleave', e => drop_div.classList.remove('bg-gray-600'));
+        drop_div.addEventListener('mouseup', e => {
+            // Only handle if a card is being dragged (set by UI.handle_pointer_down)
+            if (window.__freecell_dragged_card_id) {
+            this.handle_drop(window.__freecell_dragged_card_id, drop_div.id);
+            window.__freecell_dragged_card_id = null;
+            }
+        });
+
+        if (droppable_hint_enabled) {
+            drop_div.classList.add(...droppable_hint_style.split(' '));
+        }
+    });
+};
+
+/**
+ * Handles dragover event on a droppable target.
+ */
+UI.prototype.handle_drag_over = function (event) {
+    event.preventDefault(); // This is necessary to allow a drop.
+    event.dataTransfer.dropEffect = 'move';
+};
+
+/**
+ * Handles dragenter event for visual feedback.
+ */
+UI.prototype.handle_drag_enter = function (event) {
+    event.preventDefault();
+    event.currentTarget.classList.add('bg-gray-600');
+};
+
+/**
+ * Handles dragleave event for visual feedback.
+ */
+UI.prototype.handle_drag_leave = function (event) {
+    event.currentTarget.classList.remove('bg-gray-600');
+};
+
+/**
+ * Handles the actual drop event.
+ */
+UI.prototype.handle_drop = function (event) {
+    event.preventDefault();
+    const drop_target = event.currentTarget;
+    const this_id = drop_target.id;
+    const drag_id_str = event.dataTransfer.getData('text/plain');
+
+    if (!drag_id_str) return;
+
+    const drag_id = parseInt(drag_id_str, 10);
+    const card = document.getElementById(drag_id);
+
+    // Find the actual container (e.g., the .slot inside a freecell)
+    let targetContainer = drop_target;
+    if (this_id.startsWith('free') || this_id.startsWith('suit')) {
+        const slot = drop_target.querySelector('.slot');
+        if (slot) targetContainer = slot;
+    }
+
+    if (this_id.startsWith('suit')) targetContainer.innerHTML = '';
+
+    // Move the card in the DOM
+    targetContainer.appendChild(card);
+    card.style.top = '0';
+    card.style.left = '0';
+
+    // Adjust margin for stacked cards in columns
+    if (drop_target.classList.contains('column')) {
+        card.classList.toggle('-mt-[88%]', drop_target.children.length > 1);
+    } else {
+        card.classList.remove('-mt-[88%]');
+    }
+
+    // Update game state and UI
+    this.game.move_card(drag_id, this_id);
+    this.update_history_display();
+    this.is_won();
 };
 
 /*
@@ -860,21 +935,15 @@ UI.prototype.clear_drag = function () {
  * Clear all droppables
  */
 UI.prototype.clear_drop = function () {
-    var i, item;
-
-    for (i = 0; i < this.drop.length; i++) {
-        item = this.drop[i];
-        if (item.data('ui-droppable')) {
-            item.droppable('destroy');
+    this.drop.forEach(item => {
+        item.classList.remove(...droppable_hint_style.split(' '));
+        item.classList.remove('bg-gray-600');
+        // A robust way to clear listeners without storing them is to clone the node
+        const newItem = item.cloneNode(true);
+        if (item.parentNode) {
+            item.parentNode.replaceChild(newItem, item);
         }
-        try {
-            item.removeClass(droppable_hint_style);
-        } catch (e) {
-            // if the class is not present then this will throw an error
-        }
-        //item.droppable('disable');
-    }
-    // empty the droppable array
+    });
     this.drop.length = 0;
 };
 
@@ -884,136 +953,106 @@ UI.prototype.is_won = function () {
     }
 };
 
-/**
- * Animate the cards at the end of a won game
- */
-UI.prototype.win_animation = function () {
-    var i, $card_div, this_ui, v_x;
+// /**
+//  * Animate the cards at the end of a won game
+//  */
+// UI.prototype.win_animation = function () {
+//     var i, $card_div, this_ui, v_x;
 
-    for (i = 0; i < 53; i++) {
-        $card_div = $('#' + ((i + 4) % 52 + 1));
-        this_ui = this;
-        v_x = 3 + 3 * Math.random();
+//     for (i = 0; i < 53; i++) {
+//         $card_div = $('#' + ((i + 4) % 52 + 1));
+//         this_ui = this;
+//         v_x = 3 + 3 * Math.random();
 
-        // this is necessary for IE because you can't pass parameters to
-        // function in setTimeout. So need to create a closure to bind
-        // the variables.
-        function animator($card_div, v_x, this_ui) {
-            setTimeout(function () {
-                this_ui.card_animation($card_div, v_x, 0, this_ui);
-            }, 250 * i);
-        }
-        animator($card_div, v_x, this_ui);
-    }
-};
+//         // this is necessary for IE because you can't pass parameters to
+//         // function in setTimeout. So need to create a closure to bind
+//         // the variables.
+//         function animator($card_div, v_x, this_ui) {
+//             setTimeout(function () {
+//                 this_ui.card_animation($card_div, v_x, 0, this_ui);
+//             }, 250 * i);
+//         }
+//         animator($card_div, v_x, this_ui);
+//     }
+// };
 
-/**
- * Animation of a single card
- */
-UI.prototype.card_animation = function ($card_div, v_x, v_y, this_ui) {
-    var pos, top, left, bottom;
+// /**
+//  * Animation of a single card
+//  */
+// UI.prototype.card_animation = function ($card_div, v_x, v_y, this_ui) {
+//     var pos, top, left, bottom;
 
-    pos = $card_div.offset();
-    top = pos.top;
-    left = pos.left;
+//     pos = $card_div.offset();
+//     top = pos.top;
+//     left = pos.left;
 
-    // calculate new vertical velocity v_y
-    bottom = $(window).height() - 96; // 96 is height of card div
-    v_y += 0.5; // acceleration
-    if (top + v_y + 3 > bottom) {
-        // bounce card at bottom, and add friction
-        v_y = -0.75 * v_y; // friction = 0.75
-    }
+//     // calculate new vertical velocity v_y
+//     bottom = $(window).height() - 96; // 96 is height of card div
+//     v_y += 0.5; // acceleration
+//     if (top + v_y + 3 > bottom) {
+//         // bounce card at bottom, and add friction
+//         v_y = -0.75 * v_y; // friction = 0.75
+//     }
 
-    left -= v_x;
-    top += v_y;
-    $card_div.offset({ top: top, left: left });
-    if (left > -80) {
-        // only continue animation if card is still visible
-        setTimeout(function () {
-            var cd = $card_div;
-            this_ui.card_animation(cd, v_x, v_y, this_ui);
-        }, 20);
-    }
-};
-
-UI.prototype.setup_secret = function () {
-    var this_ui = this;
-    $('#secret').click(function () {
-        this_ui.win_animation();
-    });
-};
-
-/**
- * Show the win dialog box 
- * 取消原始设计
- */
-UI.prototype.win = function () {
-
-};
-
-/**
- * The help dialog
- * 取消原始设计
- */
-UI.prototype.help = function () {
-
-};
-
-UI.prototype.new_game = function () {
-    var this_ui = this;
-    $('#newgame').click(function () {
-        this_ui.game.reset();
-        this_ui.remove_cards();
-        this_ui.add_cards();
-        this_ui.create_draggables();
-        this_ui.update_history_display(); // 更新历史记录显示
-    });
-};
+//     left -= v_x;
+//     top += v_y;
+//     $card_div.offset({ top: top, left: left });
+//     if (left > -80) {
+//         // only continue animation if card is still visible
+//         setTimeout(function () {
+//             var cd = $card_div;
+//             this_ui.card_animation(cd, v_x, v_y, this_ui);
+//         }, 20);
+//     }
+// };
 
 
 // 设置控件事件
 UI.prototype.setup_controls = function () {
     const this_ui = this;
-    // 设置撤销按钮
-    $('#undo').on('click', function () {
-        this_ui.undo_action();
+
+    // New Game button
+    document.getElementById('newgame').addEventListener('click', () => {
+        this_ui.game.reset();
+        this_ui.remove_cards();
+        this_ui.add_cards();
+        this_ui.create_draggables();
+        this_ui.update_history_display();
     });
-    // 设置撤销按钮的键盘快捷键
-    $(document).on('keydown', function (e) {
+
+    // Undo button
+    document.getElementById('undo').addEventListener('click', () => this_ui.undo_action());
+    // Undo shortcut
+    document.addEventListener('keydown', e => {
         if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
             e.preventDefault();
             this_ui.undo_action();
         }
     });
 
-    // 可拖放提示
-    $('#droppable-hint').on('click', function () {
-        if (droppable_hint_enabled) {
-            droppable_hint_enabled = false;
-            $('#droppable-hint').removeClass("bg-purple-500 hover:bg-purple-600").addClass("bg-gray-500 hover:bg-purple-900");
-        } else {
-            droppable_hint_enabled = true;
-            $('#droppable-hint').removeClass("bg-gray-500 hover:bg-purple-900").addClass("bg-purple-500 hover:bg-purple-600");
-        }
+    // Droppable hint toggle
+    document.getElementById('droppable-hint').addEventListener('click', function () {
+        droppable_hint_enabled = !droppable_hint_enabled;
+        this.classList.toggle('bg-purple-500', droppable_hint_enabled);
+        this.classList.toggle('hover:bg-purple-600', droppable_hint_enabled);
+        this.classList.toggle('bg-gray-500', !droppable_hint_enabled);
+        this.classList.toggle('hover:bg-purple-900', !droppable_hint_enabled);
     });
 
-    // 设置发牌模式切换
-    $('#gamemodes').on('click', function () {
+    // Gamemode toggle
+    document.getElementById('gamemodes').addEventListener('click', function () {
         if (gamemode === 'test') {
             gamemode = 'random';
-            $('#gamemodes').text('发牌模式: 随机');
+            this.textContent = '发牌模式: 随机';
         } else {
             gamemode = 'test';
-            $('#gamemodes').text('发牌模式: 测试');
+            this.textContent = '发牌模式: 测试';
         }
     });
-}
+};
 // 设置撤销操作
 UI.prototype.undo_action = function () {
-    const wasUndone = this.game.undo();
-    if (wasUndone) {
-        this.remove_cards();
+    if (this.game.undo()) {
         this.draw_board_state();
         this.create_draggables();
         this.update_history_display();
@@ -1023,40 +1062,38 @@ UI.prototype.undo_action = function () {
 // 重新绘制整个游戏状态
 // 这个函数会在撤销操作后调用，重新绘制所有牌面
 UI.prototype.draw_board_state = function () {
-    // columns
+    this.remove_cards();
+
+    // Redraw columns
     for (let i = 0; i < 8; i++) {
-        const col_div = document.getElementById('col' + i.toString());
-        const cards = this.game.columns[i];
-        for (let j = 0; j < cards.length; j++) {
-            const card = cards[j];
+        const col_div = document.getElementById('col' + i);
+        this.game.columns[i].forEach((card, j) => {
             const card_div = document.createElement('div');
             card_div.id = card.id;
             const img = new Image();
             img.src = card.image();
             card_div.appendChild(img);
-
-            let classes = ['card', 'rounded'];
-            if (j > 0) {
-                classes.push('-mt-[88%]');
-            }
-            card_div.className = classes.join(' ');
+            card_div.className = 'card rounded ' + (j > 0 ? '-mt-[88%]' : '');
             col_div.appendChild(card_div);
-        }
+        });
     }
-    // freecells and suits
+
+    // Redraw freecells and suits
     ['free', 'suit'].forEach(type => {
         const sourceArray = type === 'free' ? this.game.free : this.game.suits;
         for (let i = 0; i < 4; i++) {
             const card = sourceArray[i];
             if (card) {
-                const slot_div = $(`#${type}${i}`).children('.slot');
-                const card_div = document.createElement('div');
-                card_div.id = card.id;
-                const img = new Image();
-                img.src = card.image();
-                card_div.appendChild(img);
-                card_div.className = 'card rounded';
-                slot_div.append(card_div);
+                const slot_div = document.querySelector(`#${type}${i} .slot`);
+                if (slot_div) {
+                    const card_div = document.createElement('div');
+                    card_div.id = card.id;
+                    const img = new Image();
+                    img.src = card.image();
+                    card_div.appendChild(img);
+                    card_div.className = 'card rounded';
+                    slot_div.appendChild(card_div);
+                }
             }
         }
     });
@@ -1066,30 +1103,29 @@ UI.prototype.draw_board_state = function () {
 // 这个函数会在每次移动后调用，更新历史记录列表
 UI.prototype.update_history_display = function () {
     const history = this.game.history;
-    $('#move-count').text(history.length);
+    const moveCountEl = document.getElementById('move-count');
+    if (moveCountEl) moveCountEl.textContent = history.length.toString();
 
-    const $list = $('#history-list');
-    $list.empty();
+    const list = document.getElementById('history-list');
+    if (!list) return;
+
+    list.innerHTML = ''; // Clear previous entries
 
     if (history.length === 0) {
-        $list.append('<div class="text-gray-500 text-center p-4">No moves yet.</div>');
+        list.innerHTML = '<div class="text-gray-500 text-center p-4">No moves yet.</div>';
         return;
     }
 
-    // 将卡片ID转换为可读的名称
     const getCardName = (cardId) => {
         const card = this.game.deck.get_card(cardId);
+        if (!card) return '...';
         let val = card.value;
-        if (val === 1) val = 'A';
-        else if (val === 11) val = 'J';
-        else if (val === 12) val = 'Q';
-        else if (val === 13) val = 'K';
+        if (val === 1) val = 'A'; else if (val === 11) val = 'J'; else if (val === 12) val = 'Q'; else if (val === 13) val = 'K';
         const suitSymbols = { 'hearts': '♥', 'diamonds': '♦', 'clubs': '♣', 'spades': '♠' };
         const colorClass = (card.colour === 'red') ? 'text-red-400' : 'text-gray-300';
         return `<span class="font-bold ${colorClass}">${val}${suitSymbols[card.suit]}</span>`;
     };
 
-    // 获取位置名称
     const getLocationName = (locId) => {
         if (typeof locId === 'string') {
             if (locId.startsWith('free')) return `Freecell ${parseInt(locId.slice(-1)) + 1}`;
@@ -1099,24 +1135,22 @@ UI.prototype.update_history_display = function () {
         return `card ${getCardName(locId)}`;
     };
 
-    // 显示历史记录，最新的在顶部
-    [...history].reverse().forEach((move, index) => {
+    const historyHtml = [...history].reverse().map((move, index) => {
         const toName = getLocationName(move.to);
         const cardName = getCardName(move.cardId);
-        const moveText = `Move ${cardName} to ${toName}`;
+        return `<div class="text-sm p-1.5 rounded bg-gray-800/50 text-gray-400">
+            <span class="font-mono text-gray-500 mr-2">${history.length - index}.</span> Move ${cardName} to ${toName}
+        </div>`;
+    }).join('');
 
-        const $item = $(`<div class="text-sm p-1.5 rounded bg-gray-800/50 text-gray-400">
-            <span class="font-mono text-gray-500 mr-2">${history.length - index}.</span> ${moveText}
-        </div>`);
-        $list.append($item);
-    });
+    list.insertAdjacentHTML('beforeend', historyHtml);
 };
 
 
 /******************************************************************************/
 
 var my_ui;
-$(document).ready(function () {
+document.addEventListener('DOMContentLoaded', function () {    
     //var g, my_ui;
     var g;
 

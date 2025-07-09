@@ -6,19 +6,25 @@
 
 <head>
     <meta charset="utf-8" />
-    <script src="https://cdn.staticfile.org/jquery/1.8.3/jquery.min.js" type="text/javascript"></script>
+    <!-- <script src="https://cdn.staticfile.org/jquery/1.8.3/jquery.min.js" type="text/javascript"></script>
     <script src="https://cdn.staticfile.org/jqueryui/1.12.1/jquery-ui.min.js"
-        type="text/javascript"></script>
+        type="text/javascript"></script> -->
     <script src="{{ url_for('static', filename='freecell.js') }}" type="text/javascript"></script>
     <style>
         .card {
             transition: transform 0.1s ease, opacity 0.1s ease;
         }
 
+        /* 给正在拖动的卡片一个半透明效果 */
+        .card.dragging {
+            opacity: 0.7;
+        }
+
         img {
             -webkit-user-drag: none;
             -moz-user-drag: none;
             -ms-user-drag: none;
+            pointer-events: none; /* 防止图片干扰拖拽事件 */
         }
 
         @keyframes fly-in-from-top-right {
@@ -42,7 +48,7 @@
     <title>Freecell</title>
 </head>
 
-<body class="bg-gray-900 text-white">
+<body class="bg-gray-900 text-white" style="overflow: hidden;" onselectstart="return false">
 
     <!-- Main responsive container -->
     <div class="flex flex-col lg:flex-row gap-6 p-4 max-w-screen-2xl mx-auto">
